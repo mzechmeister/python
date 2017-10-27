@@ -6,8 +6,12 @@ from __future__ import print_function
 import subprocess
 from numpy import savetxt
 import tempfile
+import os
 
-__version__ = 'v06'
+__author__ = 'M. Zechmeister'
+__version__ = 'v07'
+
+path = os.path.dirname(__file__)
 
 if 'pid' not in globals():
    global pid
@@ -29,7 +33,8 @@ def gplot_init(stdout=False):
          gnuplot = subprocess.Popen(['gnuplot','-p'], shell=True, stdin=subprocess.PIPE,
                 universal_newlines=True, bufsize=0)  # This line is needed for python3! Unbuffered and to pass str instead of bytes
          gp = gnuplot.stdin.write
-      gp('set term wxt; load "~/zoom.gnu"\n') # preload
+      if version in [4.6]: gp('set term wxt') # Prefer wxt over qt. Still possible in 4.6
+      gp('load "%s"\n'%os.path.join(path,"zoom.gnu")) # preload
    pid = gnuplot.pid
    #print pid
 
