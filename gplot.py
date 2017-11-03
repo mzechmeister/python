@@ -33,7 +33,7 @@ def gplot_init(stdout=False):
          gnuplot = subprocess.Popen(['gnuplot','-p'], shell=True, stdin=subprocess.PIPE,
                 universal_newlines=True, bufsize=0)  # This line is needed for python3! Unbuffered and to pass str instead of bytes
          gp = gnuplot.stdin.write
-      if version in [4.6]: gp('set term wxt') # Prefer wxt over qt. Still possible in 4.6
+      if version in [4.6]: gp('set term wxt;') # Prefer wxt over qt. Still possible in 4.6
       gp('load "%s"\n'%os.path.join(path,"zoom.gnu")) # preload
    pid = gnuplot.pid
    #print pid
