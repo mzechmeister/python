@@ -1,4 +1,4 @@
-# A python gnuplot interface
+# A python-gnuplot interface
 
 from __future__ import print_function
 import subprocess
@@ -7,14 +7,14 @@ import tempfile
 import os
 
 __author__ = 'Mathias Zechmeister'
-__version__ = 'v08'
-__date__ = '2018-03-09'
-__all__ = ['Iplot', 'gplot', 'Gplot', 'ogplot']
+__version__ = 'v09'
+__date__ = '2018-05-08'
+__all__ = ['gplot', 'Gplot', 'ogplot', 'Iplot']
 
 #path = os.path.dirname(__file__)
 
 class Gplot(object):
-   """The interface between Python and gnuplot.
+   """An interface between Python and gnuplot.
    
    Parameters
    ----------
@@ -83,15 +83,15 @@ class Gplot(object):
          if isinstance(arg, str):   # append argument, but flush the data before
             if data:
                # transpose data when writing
-               self.og += 1
                data = zip(*data)
+               self.og += 1
                tmpname = tmp
                if tmp in ('-',):
                   # use gnuplot's special filename '-'
                   self.buf += "\n".join(" ".join(map(str,tup)) for tup in data)+"\ne\n"
                elif tmp in ('$',):
                   # gnuplot's inline datablock
-                  tmpname = "$data" + str(self.og)
+                  tmpname = "$data%s" % self.og
                   # prepend the datablock
                   pl = tmpname+" <<EOD\n"+("\n".join(" ".join(map(str,tup)) for tup in data))+"\nEOD\n" + pl
                elif tmp is None:
@@ -114,6 +114,7 @@ class Gplot(object):
             _2D = hasattr(arg, '__iter__') and hasattr(arg[0], '__iter__')
             data += tuple(arg) if _2D else (arg,)
       self.put(pl if flush=='' else pl+self.buf, end='')
+   
    def put(self, *args, **kwargs):
       # send the commands to gnuplot
       print(file=None if self.stdout else self.gnuplot.stdin, *args, **kwargs)
@@ -127,6 +128,8 @@ class Gplot(object):
       return self._plot('splot', *args, **kwargs)
    def replot(self, *args, **kwargs):
       return self._plot('replot', *args, **kwargs)
+   def test(self, *args, **kwargs):
+      return self._plot('test', *args, **kwargs)
    def oplot(self, *args, **kwargs):
       pl = ',' if self.flush=='' else 'replot '
       return self._plot(pl, *args, **kwargs)
@@ -151,110 +154,165 @@ class Gplot(object):
          def func(*args):
             return self.set(name, *args)
          return func
-      
+
+
 class Iplot(Gplot):
    '''
    Jupyter
    Similar as Gplot, but plot returns an object that can be displayed rather than self
    '''
-   def __init__(self, *args, **kwargs):   #, cleanup=True, uri=False
+   def __init__(self, *args, **kwargs):
+      '''
+      Iplot(*arg, suffix='png', uri=True, cleanup=True, *kwargs)
+      
+      Parameters:
+      -----------
+      suffix : str, optional
+          Support for svg, html, and png.
+      uri : boolean, optional
+          If true, the figure will inline.
+      cleanup : boolean, optional
+          If true, the temporary image file will be deleted.
+          
+      '''
+      #, cleanup=True, uri=False
       self.suffix = kwargs.pop('imgfile', 'png')
-      self.uri = kwargs.pop('uri', False)
+      self.opt = kwargs.pop('opt', '')
+      self.uri = kwargs.pop('uri', True)
+      self.jsdir = kwargs.pop('jsdir', 'jsdir "gp/"') # 'jsdir "https://gnuplot.sourceforge.net/demo_svg_5.0/"'
       self.cleanup = kwargs.pop('cleanup', True)
+      self.canvasnum = 0
       return super().__init__(*args, **kwargs)
 
    def _plot(self, *args, **kwargs):
-      term = {'svg': 'svg mouse standalone', 
-              'html': 'canvas name "fishplot" mousing jsdir "gp/"'
-             }.get(self.suffix, 'pngcairo')
+      canvasname = "fishplot_%s" % self.canvasnum
+      self.canvasnum += 1
+      term = {'svg': 'svg mouse %s' % self.jsdir, # toggle does not work
+              'svg5': 'svg mouse standalone', 
+              'html': 'canvas name "%s" mousing %s' % (canvasname, self.jsdir)
+             }.get(self.suffix, 'pngcairo') + ' ' + self.opt
+      # png + no_uri, Image still converts into uri -> works
+      # png + uri, Image still converts into uri ->  works
+      # svg + local_svg, mousing work
+      # svg + no_uri, as inline
+      # svg + uri, as inline
+      # html + no_uri
       imgfile = tempfile.NamedTemporaryFile(suffix='.'+self.suffix).name
+      if not self.uri and self.suffix=='svg':
+         imgfile='simple.1.svg' # c
       if self.suffix=='html':
-         imgfile = "gnuplot_canvas.js"
+         imgfile = canvasname + '.js' #gnuplot_canvas.js"
+#         if self.uri:
+            # cleanup is already exists
+      os.system("rm -f "+imgfile)                                                                                                               
+            
+      if self.uri:
+         os.mkfifo(imgfile)
 
-      self.term(term).out('"%s"'%imgfile)
+      self.term(term).out('"%s"' % imgfile)
       super()._plot(*args, **kwargs)
       self.out()
 
-      import time, os
-      counter = 0
-      while counter<100 and not (os.path.exists(imgfile) and os.system("lsof "+imgfile)):
-         time.sleep(0.003)
-         counter += 1
-         if not self.cleanup: print(counter, end='\r')   
-      if not self.cleanup:                                                                                                                  
-         print(counter, imgfile, os.path.exists(imgfile), os.system("lsof "+imgfile))                                                              
-                                                                                                                                                
-      from IPython.display import Image, SVG, HTML, Javascript
-      if self.uri:                                                                                                                                      
-         import base64                                                                                                                             
-         im = 'data:image/png;base64,'+base64.b64encode(open(imgfile, "rb").read()).decode('ascii') 
-         showfunc = Image
-      else:                                                                                                                                        
-         showfunc = {'svg':SVG, 'html':HTML}.get(self.suffix, Image) 
-         if self.suffix=='html':
-            #ct = open("gp/canvastext.js").read()
-            #gc = open("gp/gnuplot_common.js").read()
-      #fp = open("gnuplot_canvas.js").read()
-      #  <script>%s</script>
-      # <script>%s</script>
-      # <script>fishplot();</script>
-            imgfile='''
- <table class="mbleft"><tbody><tr><td class="mousebox">
-<table class="mousebox" border="0">
-  <tbody><tr><td class="mousebox">
-    <table class="mousebox" id="gnuplot_mousebox" border="0">
-    <tbody><tr><td class="mbh"></td></tr>
-    <tr><td class="mbh">
-      <table class="mousebox">
-	<tbody><tr>
-	  <td class="icon"></td>
-	  <td class="icon" onclick="gnuplot.toggle_grid"><img src="gp/grid.png" id="gnuplot_grid_icon" class="icon-image" alt="#" title="toggle grid"></td>
-	  <td class="icon" onclick="gnuplot.unzoom"><img src="gp/previouszoom.png" id="gnuplot_unzoom_icon" class="icon-image" alt="unzoom" title="unzoom"></td>
-	  <td class="icon" onclick="gnuplot.rezoom"><img src="gp/nextzoom.png" id="gnuplot_rezoom_icon" class="icon-image" alt="rezoom" title="rezoom"></td>
-	  <td class="icon" onclick="gnuplot.toggle_zoom_text"><img src="gp/textzoom.png" id="gnuplot_textzoom_icon" class="icon-image" alt="zoom text" title="zoom text with plot"></td>
-	  <td class="icon" onclick="gnuplot.popup_help()"><img src="gp/help.png" id="gnuplot_help_icon" class="icon-image" alt="?" title="help"></td>
-	</tr>
-	<tr>
-	  <td class="icon" onclick="gnuplot.toggle_plot(&quot;gp_plot_1&quot;)">1</td>
-	  <td class="icon"> </td>
-	  <td class="icon"> </td>
-	  <td class="icon"> </td>
-	  <td class="icon"> </td> 
-	  <td class="icon"> </td>
-	</tr>
-      </tbody></table>
-  </td></tr>
-</tbody></table></td></tr><tr><td class="mousebox">
-<table class="mousebox" id="gnuplot_mousebox" border="1">
-<tbody><tr> <td class="mb0">x&nbsp;</td> <td class="mb1"><span id="gnuplot_canvas_x">-3.386</span></td> </tr>
-<tr> <td class="mb0">y&nbsp;</td> <td class="mb1"><span id="gnuplot_canvas_y">-0.4144</span></td> </tr>
-</tbody></table></td></tr>
-</tbody></table>
-</td><td>
-<table class="plot">
-<tbody><tr><td>
-    <canvas id="fishplot" width="600" height="400" tabindex="0">
-	Sorry, your browser seems not to support the HTML 5 canvas element
-    </canvas>
-</td></tr>
-</tbody></table>
-</td></tr></tbody></table>         
-        <script src="gp/canvastext.js"></script>
-         <script src="gp/gnuplot_common.js"></script>
-         <script src="gp/gnuplot_mouse.js"></script>
-         <script src="gnuplot_canvas.js"></script>
-         <script>
-            fishplot();
-              $('body').on('contextmenu', '#fishplot', function(e){ return false; });
+      if not self.uri:
+         import time
+         counter = 0
+         while counter<100 and not (os.path.exists(imgfile) and os.system("lsof "+imgfile)):
+            time.sleep(0.003)
+            counter += 1
+            if not self.cleanup: print(counter, end='\r')   
+         if not self.cleanup:                                                                                                                  
+            print(counter, imgfile, os.path.exists(imgfile), os.system("lsof "+imgfile))
+                                                                                                                                              
+      from IPython.display import Image, SVG, HTML, Javascript, display_javascript
+      showfunc = {'svg':SVG, 'html':HTML}.get(self.suffix, Image)
+      imgdata = imgfile
+      if self.suffix=='svg' and not self.uri:
+         showfunc = HTML
+         imgdata = '<embed src="%s" type="image/svg+xml">' % imgfile
+      if self.uri:
+         1
+         #imgfile = 'data:image/png;base64,'+
+         #imgdata = open(imgfile, "rb").read() # png needs rb, but imgfile can be also passed directly 
+         #return imgdata   
+         #imgdata.replace('<svg ','<script type="text/javascript" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="./gp/gnuplot_svg.js"></script>\n<svg ')
+         #import base64                                                                                                                             
+         #print (base64.b64encode(imgdata).decode('ascii')[-10:])
+
+      if self.suffix=='html':
+         if self.uri and 0:
+            imgdata = 555 #'<script>%s</script>' % open(imgfile).read()
+            return display_javascript(imgfile)
+         else:
+            imgdata = '''<script src="%s"></script>''' % imgfile
+            # set overflow in site from auto to none to enable mouse tracking
+            imgdata = '''
+         <link rel="stylesheet" href="%sgp/gnuplot_mouse.css" type="text/css">
+         <script src="%scanvastext.js"></script>
+         <script src="%sgnuplot_common.js"></script>
+         <script src="%sgnuplot_mouse.js"></script>
+<script type="text/javascript">
+   document.getElementById("site").style.overflow = "visible";
+   console.log(document.getElementById("site"))
+</script>
+
+<script type="text/javascript">
+var canvas, ctx;
+gnuplot.grid_lines = true;
+gnuplot.zoomed = false;
+gnuplot.active_plot_name = "gnuplot_canvas";
+gnuplot.active_plot = gnuplot.dummyplot;
+gnuplot.help_URL = "http://gnuplot.sourceforge.net/demo_canvas_5.0/canvas_help.html";
+gnuplot.dummyplot = function() {};
+function gnuplot_canvas( plot ) { gnuplot.active_plot(); };
+</script>
+         %s
+<table class="noborder" style="margin-top:0; border:0;">
+  <tr style="border:0;">
+    <td style="border:0;">
+    <table class="mbright" tabindex=0>
+    <tr style="max-width:None">
+      <td class="icon" onclick="gnuplot.toggle_grid();"><img src="grid.png" id="gnuplot_grid_icon" class="icon-image" alt="#" title="toggle grid"></td>
+      <td class="icon" onclick="gnuplot.unzoom();"><img src="previouszoom.png" id="gnuplot_unzoom_icon" class="icon-image" alt="unzoom" title="unzoom"></td>
+      <td class="icon" onclick="gnuplot.rezoom();"><img src="nextzoom.png" id="gnuplot_rezoom_icon" class="icon-image" alt="rezoom" title="rezoom"></td>
+      <td class="icon" onclick="gnuplot.toggle_zoom_text();"><img src="textzoom.png" id="gnuplot_textzoom_icon" class="icon-image" alt="zoom text" title="zoom text with plot"></td>
+      <td class="icon" onclick="gnuplot.popup_help();"><img src="help.png" id="gnuplot_help_icon" class="icon-image" alt="?" title="help"></td>
+  <td class="icon"></td>
+       <td class="mb0">x&nbsp;</td> <td class="mb1"><span id="%s_x">&nbsp;NaN&nbsp;</span></td>
+      <td class="mb0">y&nbsp;</td> <td class="mb1"><span id="%s_y">&nbsp;NaN&nbsp;</span></td>
+  <td class="icon">&nbsp;</td>
+      <td class="icon" onclick='gnuplot.toggle_plot("%s_plot_1")'>&#9312;</td>
+      <td class="icon" onclick='gnuplot.toggle_plot("%s_plot_2")'>&#9313;</td>
+      <td class="icon" onclick='gnuplot.toggle_plot("%s_plot_3")'>&#9314;</td>
+      <td class="icon" onclick='gnuplot.toggle_plot("%s_plot_4")'>&#9315;</td>
+      <td class="icon" onclick='gnuplot.toggle_plot("%s_plot_5")'>&#9316;</td>
+      <td class="icon" onclick='gnuplot.toggle_plot("%s_plot_6")'>&#9317;</td>
+      <td class="icon" onclick='gnuplot.toggle_plot("%s_plot_7")'>&#9318;</td>
+    </tr>
+    </table>
+    </td>
+  </tr>
+  <tr style="border:0;">
+    <td style="border:0;">
+<canvas id="%s" width=600 height=400 tabindex="0">
+    <div class='box'><h2>Your browser does not support the HTML 5 canvas element</h2></div>
+</canvas>
+    </td>
+  </tr>
+</table>
+
+      <script>
+            %s();
+              $('body').on('contextmenu', '#%s', function(e){ return false; });
        </script>
-            '''
-      if self.cleanup:                                                                                                                                  
+            ''' % (("","","","", imgdata) + (canvasname,)*12)
+
+      im = showfunc(imgdata)
+      #print (showfunc, imgdata)
+      if self.cleanup:                                                       
          os.system("rm -f "+imgfile)                                                                                                               
-      #return im                                                                                                                                    
       #   print(counter, end='\r')
       #print(counter, imgfile, os.path.exists(imgfile), os.system("lsof "+imgfile))
-
-      return showfunc(imgfile)
+      return im
 
 # a default instance
 gplot = Gplot()
