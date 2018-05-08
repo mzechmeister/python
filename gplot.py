@@ -7,19 +7,25 @@ import tempfile
 import os
 
 __author__ = 'Mathias Zechmeister'
-__version__ = 'v09'
+__version__ = 'v10'
 __date__ = '2018-05-08'
 __all__ = ['gplot', 'Gplot', 'ogplot', 'Iplot']
 
 #path = os.path.dirname(__file__)
 
 class Gplot(object):
-   """An interface between Python and gnuplot.
+   """
+   An interface between Python and gnuplot.
+   
+   Creation of an instance opens a pipe to gnuplot and return an object for communication.
+   Plot commands are send to gnuplot via the call method; arrays as arguments are handled .
+   Gnuplot options are set by calling them as method attributes.
+   Each method returns the object again. This allows to chain set and plot method.
    
    Parameters
    ----------
-   args : array or str for function, file, or other plot commands like style
    tmp : str, optional
+       Method for passing data.
        None - create a non-persistent temporary file (default)
        '' - create a local persistent file
        '-' - use gnuplot special filename (no interactive zoom available,
@@ -27,14 +33,31 @@ class Gplot(object):
        '$' - use inline datablock (not faster than temporary data,
              does not work with flush='' an ogplot)
        'filename' - create manually a temporary file
+   stdout : boolean, optional
+       If true, plot commands are send to stdout instead to gnuplot pipe.
+    mode : str, optional
+       Primary command for the call method. The default is 'plot'. After creation it can
+       be changed, e.g. gplot.mode = gplot.splot.
+
+   args : array or str for function, file, or other plot commands like style
    flush : str, optional
        set to '' to suppress flush until next the ogplot (for large data sets)
-   stdout : boolean, optional
-       if true plot commands are send to stdout instead to gnuplot pipe
-
-   pl : str, optional
-       leading command (default: 'plot', can be changed to replot or splot)
-   calling with a gnuplot set attribute return the same instance. This allows to chain calls.
+ 
+   Methods
+   -------
+   __call__
+   load
+   replot
+   plot
+   print
+   put
+   set
+   splot
+   unset
+    
+   NOTES
+   -----
+   The attribute print does not work in python 2.
 
    Examples
    --------
@@ -56,10 +79,10 @@ class Gplot(object):
    version = subprocess.check_output(['gnuplot', '-V'])
    version = float(version.split()[1]) 
    
-   def __init__(self, stdout=False, tmp=None, mode='plot'):
+   def __init__(self, tmp=None, mode='plot', stdout=False):
       self.stdout = stdout
       self.tmp = tmp
-      self.mode = getattr(self, mode) # set the default mode (plot, splot)
+      self.mode = getattr(self, mode)   # set the default mode for __call__ (plot, splot)
       self.gnuplot = subprocess.Popen(['gnuplot','-p'], shell=True, stdin=subprocess.PIPE,
                    universal_newlines=True, bufsize=0)  # This line is needed for python3! Unbuffered and to pass str instead of bytes
       self.pid = self.gnuplot.pid
@@ -79,7 +102,7 @@ class Gplot(object):
       self.flush = flush
       pl = ''
       data = ()
-      for arg in args+(flush,):
+      for arg in args + (flush,):
          if isinstance(arg, str):   # append argument, but flush the data before
             if data:
                # transpose data when writing
@@ -107,13 +130,14 @@ class Gplot(object):
                      tmpname = 'gptmp_'+str(self.pid)+str(self.og)
                   savetxt(tmpname, data)
                pl += '"'+tmpname+'"'
-            pl += ' ' + arg
+            pl += arg
             data = ()
          else:   
             # collect data; append columns and matricies
             _2D = hasattr(arg, '__iter__') and hasattr(arg[0], '__iter__')
             data += tuple(arg) if _2D else (arg,)
-      self.put(pl if flush=='' else pl+self.buf, end='')
+      self.put(pl, end='')
+      if flush!='': self.put(self.buf, end='')
    
    def put(self, *args, **kwargs):
       # send the commands to gnuplot
@@ -122,12 +146,12 @@ class Gplot(object):
    # some plot commands (kwargs possible)
    def plot(self, *args, **kwargs):
       self.og = 0; self.buf = ''; self.put('\n')        # reset
-      return self._plot('plot', *args, **kwargs)
+      return self._plot('plot ', *args, **kwargs)
    def splot(self, *args, **kwargs):
       self.og = 0; self.buf = ''; self.put('\n')        # reset
-      return self._plot('splot', *args, **kwargs)
+      return self._plot('splot ', *args, **kwargs)
    def replot(self, *args, **kwargs):
-      return self._plot('replot', *args, **kwargs)
+      return self._plot('replot ', *args, **kwargs)
    def test(self, *args, **kwargs):
       return self._plot('test', *args, **kwargs)
    def oplot(self, *args, **kwargs):
@@ -141,10 +165,10 @@ class Gplot(object):
    def __getattr__(self, name):
       # generic translatation, e.g. gplot.title sends "set title"
       if name in ('__repr__', '__str__'):
-         raise AttributeError 
+         raise AttributeError
       elif name=='repl':
          return self.replot()
-      elif name in ['set', 'unset', 'reset', 'print', 'bind']:
+      elif name in ['load', 'set', 'unset', 'reset', 'print', 'bind']:
          # some fixed keywords
          # print as attribute does not work in python 2
          def func(*args):
@@ -158,8 +182,11 @@ class Gplot(object):
 
 class Iplot(Gplot):
    '''
-   Jupyter
-   Similar as Gplot, but plot returns an object that can be displayed rather than self
+   Gnuplot for Jupyter
+   
+   The class is similar as Gplot, but, instead of self, plot method returns
+   an object that can be displayed.
+   
    '''
    def __init__(self, *args, **kwargs):
       '''
@@ -169,14 +196,29 @@ class Iplot(Gplot):
       -----------
       suffix : str, optional
           Support for svg, html, and png.
+          svg looks nice. canvas (js) is more interactive.
       uri : boolean, optional
-          If true, the figure will inline.
+          If true, the figure will inline. A fifo is used, leading to a blocking
+          read and has no problem with waiting for termination of an asynchroneous
+          process.
       cleanup : boolean, optional
-          If true, the temporary image file will be deleted.
+          If true, the temporary image file will be deleted. For uri=False this may
+          lead to non-existing file.
           
+      NOTES
+      -----
+      To get nice working gnuplot output, some issues needed to be
+      solved.
+         canvas: To enable correct mousing, div#site position (which defaults to static)
+            is set to sticky. Then it becomes an offsetParent and its scrollTop value
+            resulting from overflow:auto can be processed in gnuplot_mouse.js, which was
+            modified.
+         svg: Inline javascript is not loaded when using uri.
+         png: ok.
+      Changing size was not tested yet.
+      
       '''
-      #, cleanup=True, uri=False
-      self.suffix = kwargs.pop('imgfile', 'png')
+      self.suffix = kwargs.pop('suffix', 'png')
       self.opt = kwargs.pop('opt', '')
       self.uri = kwargs.pop('uri', True)
       self.jsdir = kwargs.pop('jsdir', 'jsdir "gp/"') # 'jsdir "https://gnuplot.sourceforge.net/demo_svg_5.0/"'
@@ -185,26 +227,27 @@ class Iplot(Gplot):
       return super().__init__(*args, **kwargs)
 
    def _plot(self, *args, **kwargs):
-      canvasname = "fishplot_%s" % self.canvasnum
       self.canvasnum += 1
-      term = {'svg': 'svg mouse %s' % self.jsdir, # toggle does not work
-              'svg5': 'svg mouse standalone', 
+      canvasname = "fishplot_%s" % self.canvasnum
+      term = {'svg': 'svg mouse %s' % self.jsdir,
+              'svg5': 'svg mouse standalone name "bla"',
               'html': 'canvas name "%s" mousing %s' % (canvasname, self.jsdir)
              }.get(self.suffix, 'pngcairo') + ' ' + self.opt
-      # png + no_uri, Image still converts into uri -> works
-      # png + uri, Image still converts into uri ->  works
+      # png + no_uri, Image still converts into uri -> but works
+      # png + uri, Image still converts into uri -> works
       # svg + local_svg, mousing work
       # svg + no_uri, as inline
       # svg + uri, as inline
       # html + no_uri
+      # html + uri -> work
       imgfile = tempfile.NamedTemporaryFile(suffix='.'+self.suffix).name
-      if not self.uri and self.suffix=='svg':
-         imgfile='simple.1.svg' # c
+      if self.suffix=='svg' and not self.uri:
+         # use a local file
+         imgfile = 'simple_%s.svg' % self.canvasnum # c
       if self.suffix=='html':
-         imgfile = canvasname + '.js' #gnuplot_canvas.js"
-#         if self.uri:
-            # cleanup is already exists
-      os.system("rm -f "+imgfile)                                                                                                               
+         imgfile = canvasname + '.js'
+      # cleanup if already exists
+      os.system("rm -f "+imgfile)
             
       if self.uri:
          os.mkfifo(imgfile)
@@ -223,63 +266,87 @@ class Iplot(Gplot):
          if not self.cleanup:                                                                                                                  
             print(counter, imgfile, os.path.exists(imgfile), os.system("lsof "+imgfile))
                                                                                                                                               
-      from IPython.display import Image, SVG, HTML, Javascript, display_javascript
+      from IPython.display import Image, SVG, HTML, Javascript
       showfunc = {'svg':SVG, 'html':HTML}.get(self.suffix, Image)
       imgdata = imgfile
-      if self.suffix=='svg' and not self.uri:
-         showfunc = HTML
-         imgdata = '<embed src="%s" type="image/svg+xml">' % imgfile
       if self.uri:
          1
          #imgfile = 'data:image/png;base64,'+
          #imgdata = open(imgfile, "rb").read() # png needs rb, but imgfile can be also passed directly 
-         #return imgdata   
          #imgdata.replace('<svg ','<script type="text/javascript" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="./gp/gnuplot_svg.js"></script>\n<svg ')
          #import base64                                                                                                                             
          #print (base64.b64encode(imgdata).decode('ascii')[-10:])
 
+      if self.suffix=='svg':
+         if not self.uri:
+            showfunc = HTML
+            imgdata = '<embed src="%s" type="image/svg+xml">' % imgfile
+         else:
+            showfunc = HTML
+            imgdata = open(imgfile).read() # .replace("onload","onclick")
+            # to get mousing in chrome uncomment in gnuplot_svg.js:63
+            # // p.x = evt.pageX; p.y = evt.pageY; 
+            imgdata = ('''
+    Inline SVG1
+     <script> 
+''' +open("gnuplot_svg.js").read().replace("documentElement", 'getElementsByTagName("svg")[0]') + '''
+        // manually gnuplot_svg.Init (onload does not fire?)
+        gnuplot_svg.SVGDoc = document.getElementsByTagName("svg")[0];
+        console.log(gnuplot_svg.SVGRoot, gnuplot_svg.SVGDoc);
+     </script>
+    <object>
+            ''' + imgdata + '</object')
+
       if self.suffix=='html':
-         if self.uri and 0:
-            imgdata = 555 #'<script>%s</script>' % open(imgfile).read()
-            return display_javascript(imgfile)
+         if self.uri:
+            imgdata = '<script>%s</script>' % open(imgfile).read()
          else:
             imgdata = '''<script src="%s"></script>''' % imgfile
-            # set overflow in site from auto to none to enable mouse tracking
-            imgdata = '''
+         # style the buttons and work around some mousing issues 
+         imgdata = '''
          <link rel="stylesheet" href="%sgp/gnuplot_mouse.css" type="text/css">
-         <script src="%scanvastext.js"></script>
-         <script src="%sgnuplot_common.js"></script>
-         <script src="%sgnuplot_mouse.js"></script>
+<style>
+   img.icon-image {
+      max-width: None !important;
+   }
+   td.icon, td.mb0, td.mb1 {
+      background-color: #f7f7f7;
+      line-height: 16px;
+   }
+</style>
+<script src="%scanvastext.js"></script>
+<script src="%sgnuplot_common.js"></script>
+<script src="%sgnuplot_mouse.js"></script>
 <script type="text/javascript">
-   document.getElementById("site").style.overflow = "visible";
-   console.log(document.getElementById("site"))
+   // to get correct mouse coords (overflow:auto, scrollTop)
+   document.getElementById("site").style.position = "sticky";
 </script>
-
 <script type="text/javascript">
-var canvas, ctx;
-gnuplot.grid_lines = true;
-gnuplot.zoomed = false;
-gnuplot.active_plot_name = "gnuplot_canvas";
-gnuplot.active_plot = gnuplot.dummyplot;
-gnuplot.help_URL = "http://gnuplot.sourceforge.net/demo_canvas_5.0/canvas_help.html";
-gnuplot.dummyplot = function() {};
-function gnuplot_canvas( plot ) { gnuplot.active_plot(); };
+   // from view-source:http://gnuplot.sourceforge.net/demo_canvas/simple.html
+   var canvas, ctx;
+   gnuplot.grid_lines = true;
+   gnuplot.zoomed = false;
+   gnuplot.active_plot_name = "gnuplot_canvas";
+   gnuplot.active_plot = gnuplot.dummyplot;
+   gnuplot.help_URL = "http://gnuplot.sourceforge.net/demo_canvas_5.0/canvas_help.html";
+   gnuplot.dummyplot = function() {};
+   function gnuplot_canvas( plot ) { gnuplot.active_plot(); };
 </script>
          %s
 <table class="noborder" style="margin-top:0; border:0;">
   <tr style="border:0;">
     <td style="border:0;">
     <table class="mbright" tabindex=0>
-    <tr style="max-width:None">
+    <tr>
       <td class="icon" onclick="gnuplot.toggle_grid();"><img src="grid.png" id="gnuplot_grid_icon" class="icon-image" alt="#" title="toggle grid"></td>
       <td class="icon" onclick="gnuplot.unzoom();"><img src="previouszoom.png" id="gnuplot_unzoom_icon" class="icon-image" alt="unzoom" title="unzoom"></td>
       <td class="icon" onclick="gnuplot.rezoom();"><img src="nextzoom.png" id="gnuplot_rezoom_icon" class="icon-image" alt="rezoom" title="rezoom"></td>
       <td class="icon" onclick="gnuplot.toggle_zoom_text();"><img src="textzoom.png" id="gnuplot_textzoom_icon" class="icon-image" alt="zoom text" title="zoom text with plot"></td>
       <td class="icon" onclick="gnuplot.popup_help();"><img src="help.png" id="gnuplot_help_icon" class="icon-image" alt="?" title="help"></td>
-  <td class="icon"></td>
-       <td class="mb0">x&nbsp;</td> <td class="mb1"><span id="%s_x">&nbsp;NaN&nbsp;</span></td>
+      <td class="icon"></td>
+      <td class="mb0">x&nbsp;</td> <td class="mb1"><span id="%s_x">&nbsp;NaN&nbsp;</span></td>
       <td class="mb0">y&nbsp;</td> <td class="mb1"><span id="%s_y">&nbsp;NaN&nbsp;</span></td>
-  <td class="icon">&nbsp;</td>
+      <td class="icon">&nbsp;</td>
       <td class="icon" onclick='gnuplot.toggle_plot("%s_plot_1")'>&#9312;</td>
       <td class="icon" onclick='gnuplot.toggle_plot("%s_plot_2")'>&#9313;</td>
       <td class="icon" onclick='gnuplot.toggle_plot("%s_plot_3")'>&#9314;</td>
@@ -299,20 +366,19 @@ function gnuplot_canvas( plot ) { gnuplot.active_plot(); };
     </td>
   </tr>
 </table>
-
       <script>
-            %s();
-              $('body').on('contextmenu', '#%s', function(e){ return false; });
-       </script>
+          %s();
+           $('body').on('contextmenu', '#%s', function(e){ return false; });
+      </script>
+      
             ''' % (("","","","", imgdata) + (canvasname,)*12)
 
-      im = showfunc(imgdata)
-      #print (showfunc, imgdata)
+      img = showfunc(imgdata)
       if self.cleanup:                                                       
          os.system("rm -f "+imgfile)                                                                                                               
-      #   print(counter, end='\r')
-      #print(counter, imgfile, os.path.exists(imgfile), os.system("lsof "+imgfile))
-      return im
+         # print(counter, end='\r')
+         # print(counter, imgfile, os.path.exists(imgfile), os.system("lsof "+imgfile))
+      return img
 
 # a default instance
 gplot = Gplot()
