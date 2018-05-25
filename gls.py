@@ -30,7 +30,7 @@ import numpy as np
 from numpy import sum, pi, cos, sin, arctan2, exp, log, sqrt,\
                   dot, argmax, arange
 
-__version__ = '2017-02-21'
+__version__ = '2018-05-25'
 __author__ = 'Mathias Zechmeister, Stefan Czesla'
 
 class Gls:
@@ -251,12 +251,12 @@ class Gls:
         for k, omega in enumerate(2.*pi*self.freq):
             # Circular frequencies.
             if self.fast:
+#                if k % 1000 == 0:
                 if k % 1000 == 0:
                     # init/refresh recurrences to stop error propagation
                     eix = exp(1j * omega * self.th)  # exp(ix) = cos(x) + i*sin(x)
                 cosx = eix.real
                 sinx = eix.imag
-                eix *= eid              # increase freq for next loop
             else:
                 x = omega * self.th
                 cosx = cos(x)
@@ -270,6 +270,9 @@ class Gls:
             wcosx = w * cosx
             CC[k] = dot(wcosx, cosx)    # Eq. (13)
             CS[k] = dot(wcosx, sinx)    # Eq. (15)
+
+            if self.fast:
+               eix *= eid              # increase freq for next loop
 
         SS = 1. - CC
         if not self.ls:
