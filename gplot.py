@@ -7,8 +7,8 @@ import tempfile
 import os
 
 __author__ = 'Mathias Zechmeister'
-__version__ = 'v10'
-__date__ = '2018-05-08'
+__version__ = 'v11'
+__date__ = '2018-07-03'
 __all__ = ['gplot', 'Gplot', 'ogplot', 'Iplot']
 
 #path = os.path.dirname(__file__)
@@ -42,7 +42,7 @@ class Gplot(object):
    args : array or str for function, file, or other plot commands like style
    flush : str, optional
        set to '' to suppress flush until next the ogplot (for large data sets)
- 
+
    Methods
    -------
    __call__
@@ -79,11 +79,11 @@ class Gplot(object):
    version = subprocess.check_output(['gnuplot', '-V'])
    version = float(version.split()[1]) 
    
-   def __init__(self, tmp=None, mode='plot', stdout=False):
+   def __init__(self, cmdargs='', tmp=None, mode='plot', stdout=False):
       self.stdout = stdout
       self.tmp = tmp
       self.mode = getattr(self, mode)   # set the default mode for __call__ (plot, splot)
-      self.gnuplot = subprocess.Popen(['gnuplot','-p'], shell=True, stdin=subprocess.PIPE,
+      self.gnuplot = subprocess.Popen('gnuplot '+cmdargs, shell=True, stdin=subprocess.PIPE,
                    universal_newlines=True, bufsize=0)  # This line is needed for python3! Unbuffered and to pass str instead of bytes
       self.pid = self.gnuplot.pid
       #if version in [4.6]: gp('set term wxt;') # Prefer wxt over qt. Still possible in 4.6
@@ -134,8 +134,9 @@ class Gplot(object):
             data = ()
          else:   
             # collect data; append columns and matricies
-            _2D = hasattr(arg, '__iter__') and hasattr(arg[0], '__iter__')
-            data += tuple(arg) if _2D else (arg,)
+            _1D = hasattr(arg, '__iter__')
+            _2D = _1D and hasattr(arg[0], '__iter__')
+            data += tuple(arg) if _2D else (arg,) if _1D else ([arg],)
       self.put(pl, end='')
       if flush!='': self.put(self.buf, end='')
    
@@ -204,7 +205,7 @@ class Iplot(Gplot):
       cleanup : boolean, optional
           If true, the temporary image file will be deleted. For uri=False this may
           lead to non-existing file.
-          
+      
       NOTES
       -----
       To get nice working gnuplot output, some issues needed to be
@@ -248,7 +249,7 @@ class Iplot(Gplot):
          imgfile = canvasname + '.js'
       # cleanup if already exists
       os.system("rm -f "+imgfile)
-            
+
       if self.uri:
          os.mkfifo(imgfile)
 
@@ -263,9 +264,9 @@ class Iplot(Gplot):
             time.sleep(0.003)
             counter += 1
             if not self.cleanup: print(counter, end='\r')   
-         if not self.cleanup:                                                                                                                  
+         if not self.cleanup:
             print(counter, imgfile, os.path.exists(imgfile), os.system("lsof "+imgfile))
-                                                                                                                                              
+
       from IPython.display import Image, SVG, HTML, Javascript
       showfunc = {'svg':SVG, 'html':HTML}.get(self.suffix, Image)
       imgdata = imgfile
@@ -274,7 +275,7 @@ class Iplot(Gplot):
          #imgfile = 'data:image/png;base64,'+
          #imgdata = open(imgfile, "rb").read() # png needs rb, but imgfile can be also passed directly 
          #imgdata.replace('<svg ','<script type="text/javascript" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="./gp/gnuplot_svg.js"></script>\n<svg ')
-         #import base64                                                                                                                             
+         #import base64
          #print (base64.b64encode(imgdata).decode('ascii')[-10:])
 
       if self.suffix=='svg':
@@ -374,8 +375,8 @@ class Iplot(Gplot):
             ''' % (("","","","", imgdata) + (canvasname,)*12)
 
       img = showfunc(imgdata)
-      if self.cleanup:                                                       
-         os.system("rm -f "+imgfile)                                                                                                               
+      if self.cleanup:
+         os.system("rm -f "+imgfile)
          # print(counter, end='\r')
          # print(counter, imgfile, os.path.exists(imgfile), os.system("lsof "+imgfile))
       return img
