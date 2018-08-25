@@ -7,8 +7,8 @@ import tempfile
 import os
 
 __author__ = 'Mathias Zechmeister'
-__version__ = 'v11'
-__date__ = '2018-07-03'
+__version__ = 'v12'
+__date__ = '2018-08-25'
 __all__ = ['gplot', 'Gplot', 'ogplot', 'Iplot']
 
 #path = os.path.dirname(__file__)
@@ -54,6 +54,7 @@ class Gplot(object):
    set
    splot
    unset
+   var
     
    NOTES
    -----
@@ -61,19 +62,23 @@ class Gplot(object):
 
    Examples
    --------
-   >>> gplot('sin(x) w lp lt 3')
-   >>> ogplot(numpy.arange(10)**2.,'w lp lt 3')
-   >>> ogplot('"filename" w lp lt 3')
-   >>> gplot('x/5, 1, x**2/50 w l lt 3,', numpy.sqrt(numpy.arange(10)),' us 0:1 ps 2 pt 7 ,sin(x)')
+   
+   A simple plot and add a data set
+   
+   >>> gplot('sin(x) w lp lt 2')
+   >>> gplot+(np.arange(10)**2., 'w lp lt 3')
+   >>> gplot+('"filename" w lp lt 3')
+   
+   Pass multiple curve in one call
+   
+   >>> gplot('x/5, 1, x**2/50 w l lt 3,', np.sqrt(np.arange(10)),' us 0:1 ps 2 pt 7 ,sin(x)')
    >>> gplot.mxtics().mytics(2).repl
    >>> gplot([1,2,3,4])
-   >>> gplot([1,2,3,4], [2,2,1,1.5])
+   >>> gplot([1,2,3,4], [2,3,1,1.5])
    >>> gplot([1,2,3,4], [[2,2,1,1.5], [3,1,4,5.5]])
    >>> gplot([[2,2,1,1.5]])
    >>> gplot([1],[2],[3],[4])
    >>> gplot(1,2,3,4)
-   >>> gplot([1,2,1,0.5])
-   >>> gplot([[2,2,1,1.5]])
    
    """
    version = subprocess.check_output(['gnuplot', '-V'])
@@ -86,18 +91,16 @@ class Gplot(object):
       self.gnuplot = subprocess.Popen('gnuplot '+cmdargs, shell=True, stdin=subprocess.PIPE,
                    universal_newlines=True, bufsize=0)  # This line is needed for python3! Unbuffered and to pass str instead of bytes
       self.pid = self.gnuplot.pid
-      #if version in [4.6]: gp('set term wxt;') # Prefer wxt over qt. Still possible in 4.6
-      #gp('load "%s"\n'%os.path.join(path,"zoom.gnu")) # preload
       self.og = 0  # overplot number
       self.buf = ''
       self.tmp2 = []
       self.flush = None
    
    def _plot(self, *args, **kwargs):
-      # collect all argument
+      # collect all arguments
       tmp = kwargs.pop('tmp', self.tmp)
       flush = kwargs.pop('flush', '\n')
-      if self.version in [4.6] and flush=="\n": flush = "\n\n" # append a newline to workaround a gnuplot pipe bug
+      if self.version in [4.6] and flush=="\n": flush = "\n\n"   # append a newline to workaround a gnuplot pipe bug
       # with mouse zooming (see http://sourceforge.net/p/gnuplot/bugs/1203/)
       self.flush = flush
       pl = ''
@@ -132,14 +135,14 @@ class Gplot(object):
                pl += '"'+tmpname+'"'
             pl += arg
             data = ()
-         else:   
+         else:
             # collect data; append columns and matricies
             _1D = hasattr(arg, '__iter__')
             _2D = _1D and hasattr(arg[0], '__iter__')
             data += tuple(arg) if _2D else (arg,) if _1D else ([arg],)
       self.put(pl, end='')
       if flush!='': self.put(self.buf, end='')
-   
+
    def put(self, *args, **kwargs):
       # send the commands to gnuplot
       print(file=None if self.stdout else self.gnuplot.stdin, *args, **kwargs)
@@ -156,29 +159,50 @@ class Gplot(object):
    def test(self, *args, **kwargs):
       return self._plot('test', *args, **kwargs)
    def oplot(self, *args, **kwargs):
-      pl = ',' if self.flush=='' else 'replot '
+      pl = ',' if self.flush=='' else ' replot '
       return self._plot(pl, *args, **kwargs)
-   
+
+   def var(self, **kwargs):
+      # set gnuplot variable
+      for i in kwargs.items(): self.put("%s=%s" % i)
+      return self
+
    def __call__(self, *args, **kwargs):
       # by default plot mode is executed, but the user can change that
       return self.mode(*args, **kwargs)
-   
+
    def __getattr__(self, name):
       # generic translatation, e.g. gplot.title sends "set title"
       if name in ('__repr__', '__str__'):
          raise AttributeError
       elif name=='repl':
          return self.replot()
-      elif name in ['load', 'set', 'unset', 'reset', 'print', 'bind']:
+      elif name in ['load', 'set', 'show', 'unset', 'reset', 'print', 'bind']:
          # some fixed keywords
          # print as attribute does not work in python 2
          def func(*args):
             return self.put(name, *args)
          return func
-      else:   
+      else:
          def func(*args):
             return self.set(name, *args)
          return func
+
+   def __add__(self, other):
+      '''Add a curve to an existing plot (similar as ogplot).
+      
+      This will look like calling the gplot instance, but a tuple is retrieved.
+      Hence no keywords can be passed.
+      To pass flush='', use the __lt__ method.
+      '''
+      self.oplot(*other)
+
+   def __lt__(self, other):
+      '''Add a curve to an existing plot, but do not flush.
+      
+      In the "<" sign shall remind to the bash pipe operator.
+      '''
+      self.oplot(*other, flush='')
 
 
 class Iplot(Gplot):
