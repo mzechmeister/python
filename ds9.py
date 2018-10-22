@@ -1,7 +1,15 @@
-import pyfits, subprocess
+from __future__ import print_function
+
+import subprocess
+try:
+   import pyfits
+except:
+   import astropy.io.fits as pyfits
 
 __author__ = 'Mathias Zechmeister'
-__version__= '1.00'
+__version__= '2.00'
+__date__ = '2018-10-22'
+
 
 def ds9(data, tmpfile='-', port='pyds9'):
    """
@@ -18,7 +26,7 @@ def ds9(data, tmpfile='-', port='pyds9'):
    ---------
    >>> from ds9 import *
    >>> import numpy as np
-   >>> arr = np.tile(np.arange(20),(5,1))
+   >>> arr = np.arange(20).reshape(5,4)
    >>> ds9(arr)
 
    """
@@ -42,26 +50,55 @@ def ds9(data, tmpfile='-', port='pyds9'):
       hdu.writeto(tmpfile, clobber=True)
       subprocess.call('xds9 -p '+port+' '+tmpfile+' &', shell=True)
 
-   ports, xpamiss = subprocess.Popen("xpaget xpans | grep 'DS9 "+port+"'", shell=True, stdout=subprocess.PIPE, stderr= subprocess.PIPE).communicate()
+   ports, xpamiss = subprocess.Popen("xpaget xpans | grep 'DS9 "+port+"'", shell=True, stdout=subprocess.PIPE, stderr= subprocess.PIPE, universal_newlines=True, bufsize=0).communicate()
 
    if ports=='':
       # switch to normal start and create a new port
       if tmpfile=='-':
          #pause('ds9')
-         pipeds9 = subprocess.Popen(['ds9  -analysis ~/.ds9.ans -title '+port+" -port 0 -array -'["+dim+"]' "], shell=True, stdin=subprocess.PIPE, )
+         pipeds9 = subprocess.Popen(['ds9  -analysis ~/.ds9.ans -title '+port+" -port 0 -array -'["+dim+"]' "], shell=True, stdin=subprocess.PIPE)
 #           +ds9opt+"  2> /dev/null &", unit=unit
-         data.tofile(pipeds9.stdin)
+         # data.tofile(pipeds9.stdin) # raises in python3: "OSError: obtaining file position failed"
+         pipeds9.stdin.write(data.tobytes())
          pipeds9.stdin.close()
       else:
          subprocess.call('xds9 -p '+port+' '+tmpfile+' &', shell=True)
    else:
       if tmpfile=='-':
          subprocess.call('xpaset -p '+port+' frame new', shell=True)
-         pipeds9 = subprocess.Popen(['xpaset '+port+" array -'["+dim+"']"], shell=True, stdin=subprocess.PIPE,)
-         data.tofile(pipeds9.stdin)
+         pipeds9 = subprocess.Popen(['xpaset '+port+" array -'["+dim+"']"], shell=True, stdin=subprocess.PIPE)
+         #data.tofile(pipeds9.stdin)
+         pipeds9.stdin.write(data.tobytes())
          pipeds9.stdin.close()
       else:
          subprocess.call('xds9 -p '+port+' '+tmpfile+' &', shell=True)
+
+
+def ds9msk(mask, bx=None, by=None, limit=15000, box=True, **kwargs):
+   """
+   Create a ds9 region from a map and mark bad pixels with boxes.
+
+   Parameters
+   ----------
+   mask : array-like
+      Nonzero values are marked with boxes.
+   bx : float
+      Box size in x (defaults to 1).
+   by : float
+      Box size in y (default to bx).
+
+   Examples
+   --------
+   >>> z = np.arange(20).reshape(5,4)
+   >>> ds9(z)
+   >>> ds9msk((z % 7)==0) #, /clear
+
+   """
+   idx = np.where(mask)
+   if idx[0].size>limit:
+      print("WARNING: Too many flagged pixels", idx[0].size, "(limit: %s)"%limit)
+      return
+   ods9(*idx, bx, by, box=box, **kwargs)
 
 
 def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False, reset=False, label=False, tag1=None, tag2=None, regfile=None, color=None, pt=False, box=False, circle=False, curve=False, line=False, point=False, polygon=False, x=False, cross=False, red=False, blue=False, green=False, clear=False, header=False):
@@ -220,10 +257,10 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
    lines = "\n".join(lines)
 
    # check if the port exists
-   ports, xpamiss = subprocess.Popen("xpaget xpans | grep 'DS9 "+port+"'", shell=True, stdout=subprocess.PIPE, stderr= subprocess.PIPE).communicate()
+   ports, xpamiss = subprocess.Popen("xpaget xpans | grep 'DS9 "+port+"'", shell=True, stdout=subprocess.PIPE, stderr= subprocess.PIPE, universal_newlines=True, bufsize=0).communicate()
 
    if ports=='':
-      print 'xpa misses: ', port
+      print('xpa misses: ', port)
       return
 
    #if keyword_set(reset) then $
@@ -241,11 +278,11 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
       #; wait, 0.01  ; somehow needed, due to buffering?
       #; flush, ounit ; does this helps ?
       #free_lun, ounit
-      print lines
-      pipeds9 = subprocess.Popen(['xpaset '+port+' regions'], shell=True, stdin=subprocess.PIPE,)
+      print(lines)
+      pipeds9 = subprocess.Popen(['xpaset '+port+' regions'], shell=True, stdin=subprocess.PIPE, universal_newlines=True, bufsize=0)  # This line is needed for python3! Unbuffered and to pass str )
       pipeds9.communicate(lines)
    else:
-      print lines
+      print(lines)
       pass
 
    #endif else if regfile eq '-' then $
