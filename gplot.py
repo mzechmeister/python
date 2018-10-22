@@ -35,7 +35,7 @@ class Gplot(object):
        'filename' - create manually a temporary file
    stdout : boolean, optional
        If true, plot commands are send to stdout instead to gnuplot pipe.
-    mode : str, optional
+   mode : str, optional
        Primary command for the call method. The default is 'plot'. After creation it can
        be changed, e.g. gplot.mode = gplot.splot.
 
@@ -55,7 +55,7 @@ class Gplot(object):
    splot
    unset
    var
-    
+   
    NOTES
    -----
    The attribute print does not work in python 2.
@@ -136,9 +136,9 @@ class Gplot(object):
             pl += arg
             data = ()
          else:
-            # collect data; append columns and matricies
+            # collect data; append columns and matrices
             _1D = hasattr(arg, '__iter__')
-            _2D = _1D and hasattr(arg[0], '__iter__')
+            _2D = _1D and hasattr(arg[0], '__iter__') and not isinstance(arg[0], str)
             data += tuple(arg) if _2D else (arg,) if _1D else ([arg],)
       self.put(pl, end='')
       if flush!='': self.put(self.buf, end='')
@@ -163,7 +163,7 @@ class Gplot(object):
       return self._plot(pl, *args, **kwargs)
 
    def var(self, **kwargs):
-      # set gnuplot variable
+      # set gnuplot variables
       for i in kwargs.items(): self.put("%s=%s" % i)
       return self
 
@@ -224,7 +224,7 @@ class Iplot(Gplot):
           svg looks nice. canvas (js) is more interactive.
       uri : boolean, optional
           If true, the figure will inline. A fifo is used, leading to a blocking
-          read and has no problem with waiting for termination of an asynchroneous
+          read and has no problem with waiting for termination of an asynchronous
           process.
       cleanup : boolean, optional
           If true, the temporary image file will be deleted. For uri=False this may
@@ -287,7 +287,7 @@ class Iplot(Gplot):
          while counter<100 and not (os.path.exists(imgfile) and os.system("lsof "+imgfile)):
             time.sleep(0.003)
             counter += 1
-            if not self.cleanup: print(counter, end='\r')   
+            if not self.cleanup: print(counter, end='\r')
          if not self.cleanup:
             print(counter, imgfile, os.path.exists(imgfile), os.system("lsof "+imgfile))
 
