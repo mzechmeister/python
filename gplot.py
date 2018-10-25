@@ -7,11 +7,10 @@ import tempfile
 import os
 
 __author__ = 'Mathias Zechmeister'
-__version__ = 'v12'
-__date__ = '2018-08-25'
+__version__ = 'v13'
+__date__ = '2018-10-25'
 __all__ = ['gplot', 'Gplot', 'ogplot', 'Iplot']
 
-#path = os.path.dirname(__file__)
 
 class Gplot(object):
    """
@@ -26,13 +25,13 @@ class Gplot(object):
    ----------
    tmp : str, optional
        Method for passing data.
-       None - create a non-persistent temporary file (default)
-       '' - create a local persistent file
-       '-' - use gnuplot special filename (no interactive zoom available,
-             replot does not work)
-       '$' - use inline datablock (not faster than temporary data,
+       * None - create a non-persistent temporary file (default)
+       * '' - create a local persistent file
+       * '-' - use gnuplot special filename (no interactive zoom available,
+               replot does not work)
+       * '$' - use inline datablock (not faster than temporary data,
              does not work with flush='' an ogplot)
-       'filename' - create manually a temporary file
+       * 'filename' - create manually a temporary file
    stdout : boolean, optional
        If true, plot commands are send to stdout instead to gnuplot pipe.
    mode : str, optional
@@ -53,6 +52,7 @@ class Gplot(object):
    put
    set
    splot
+   test
    unset
    var
    
@@ -69,7 +69,7 @@ class Gplot(object):
    >>> gplot+(np.arange(10)**2., 'w lp lt 3')
    >>> gplot+('"filename" w lp lt 3')
    
-   Pass multiple curve in one call
+   Pass multiple curves in one call
    
    >>> gplot('x/5, 1, x**2/50 w l lt 3,', np.sqrt(np.arange(10)),' us 0:1 ps 2 pt 7 ,sin(x)')
    >>> gplot.mxtics().mytics(2).repl
@@ -89,9 +89,9 @@ class Gplot(object):
       self.tmp = tmp
       self.mode = getattr(self, mode)   # set the default mode for __call__ (plot, splot)
       self.gnuplot = subprocess.Popen('gnuplot '+cmdargs, shell=True, stdin=subprocess.PIPE,
-                   universal_newlines=True, bufsize=0)  # This line is needed for python3! Unbuffered and to pass str instead of bytes
+                   universal_newlines=True, bufsize=0)   # This line is needed for python3! Unbuffered and to pass str instead of bytes
       self.pid = self.gnuplot.pid
-      self.og = 0  # overplot number
+      self.og = 0   # overplot number
       self.buf = ''
       self.tmp2 = []
       self.flush = None
@@ -147,17 +147,22 @@ class Gplot(object):
       # send the commands to gnuplot
       print(file=None if self.stdout else self.gnuplot.stdin, *args, **kwargs)
       return self
+
    # some plot commands (kwargs possible)
    def plot(self, *args, **kwargs):
       self.og = 0; self.buf = ''; self.put('\n')        # reset
       return self._plot('plot ', *args, **kwargs)
+
    def splot(self, *args, **kwargs):
       self.og = 0; self.buf = ''; self.put('\n')        # reset
       return self._plot('splot ', *args, **kwargs)
+
    def replot(self, *args, **kwargs):
       return self._plot('replot ', *args, **kwargs)
+
    def test(self, *args, **kwargs):
       return self._plot('test', *args, **kwargs)
+
    def oplot(self, *args, **kwargs):
       pl = ',' if self.flush=='' else ' replot '
       return self._plot(pl, *args, **kwargs)
@@ -184,6 +189,7 @@ class Gplot(object):
             return self.put(name, *args)
          return func
       else:
+         # dynamic attributes (xlabel, key, etc.)
          def func(*args):
             return self.set(name, *args)
          return func
@@ -193,9 +199,20 @@ class Gplot(object):
       
       This will look like calling the gplot instance, but a tuple is retrieved.
       Hence no keywords can be passed.
-      To pass flush='', use the __lt__ method.
+      The plot will be update immediately. To pass flush='', use the __lt__
+      method.
       '''
       self.oplot(*other)
+
+   def __sub__(self, other):
+      '''Start a new plot, but do not flush.
+      
+      In particular for larger data sets, one may want to accumulate
+      remaing curves before, instead of replotting each time.
+      Use gplot< to append more sets and gplot+ to finish the plot.
+      The "-" may remind to clear previous plots or start a line of new curves.
+      '''
+      self(*other, flush='')
 
    def __lt__(self, other):
       '''Add a curve to an existing plot, but do not flush.
@@ -207,52 +224,83 @@ class Gplot(object):
 
 class Iplot(Gplot):
    '''
-   Gnuplot for Jupyter
+   Gnuplot for Jupyter.
    
    The class is similar as Gplot, but, instead of self, plot method returns
    an object that can be displayed.
    
    '''
+   # Search gnuplot installation with javascript library
+   # '/usr/share/gnuplot/%s/js/' % Gplot.version
+   # '/usr/local/share/gnuplot/%s/js/' % Gplot.version
+   # The path can be extracted from output of term svg mousing.
+   # Request a small plot and parse the output
+   _jsdir = subprocess.check_output(['gnuplot', '-e', 'set term svg mousing; unset border; unset tics; set samp 2; pl [][0:1]NaN t ""'], universal_newlines=True).split('gnuplot_svg.js')[0].split('xlink:href="')[-1]
+   # universal_newlines=True leads finally to the same type|class=str in python 2 and python 3, instead of bytes
+
+   # The absolute path might not accessible in Jupyter, if localhost was
+   # started in local directory.
+
+   # online locations:
+   # latest version, including mouse wheel for zooming for svg:
+   _jsdir = "http://gnuplot.sourceforge.net/demo_canvas_cvs/" 
+   # "http://gnuplot.sourceforge.net/demo_canvas_5.2/"
+   # "http://gnuplot.sourceforge.net/demo_svg/"
+   
    def __init__(self, *args, **kwargs):
       '''
-      Iplot(*arg, suffix='png', uri=True, cleanup=True, *kwargs)
+      Iplot(*args, suffix='png', uri=True, cleanup=True, **kwargs)
       
       Parameters:
       -----------
+      *args : cmdargs (see Gplot).
       suffix : str, optional
+          Default is 'png'.
           Support for svg, html, and png.
           svg looks nice. canvas (js) is more interactive.
+      opt : str, optional
+          Additional terminal settings (e.g. 'size 300,200').
       uri : boolean, optional
           If true, the figure will inline. A fifo is used, leading to a blocking
           read and has no problem with waiting for termination of an asynchronous
-          process.
+          process. It seems to be faster.
       cleanup : boolean, optional
-          If true, the temporary image file will be deleted. For uri=False this may
-          lead to non-existing file.
+          If true (default), the temporary image file will be deleted. For uri=False,
+          this may lead to non-existing file.
+      jsdir : str, optional
+          Path to gnuplot javascript library.
+          (default: http://gnuplot.sourceforge.net/demo_canvas_cvs/)
+      **kwargs : tmp (see Gplot).
+      
+      Examples
+      --------
+      >>> iplot = Iplot(opt='size 300,200')
+      >>> iplot('x')
       
       NOTES
       -----
       To get nice working gnuplot output, some issues needed to be
       solved.
-         canvas: To enable correct mousing, div#site position (which defaults to static)
-            is set to sticky. Then it becomes an offsetParent and its scrollTop value
-            resulting from overflow:auto can be processed in gnuplot_mouse.js, which was
-            modified.
-         svg: Inline javascript is not loaded when using uri.
-         png: ok.
+         * canvas: To enable correct mousing, div#site position (which defaults
+             to static) is set to sticky. Then it becomes an offsetParent and
+             its scrollTop value resulting from overflow:auto can be processed
+             in gnuplot_mouse.js, which was modified.
+         * svg: Inline javascript is not loaded when using uri.
+         * png: ok.
       Changing size was not tested yet.
       
       '''
       self.suffix = kwargs.pop('suffix', 'png')
       self.opt = kwargs.pop('opt', '')
       self.uri = kwargs.pop('uri', True)
-      self.jsdir = kwargs.pop('jsdir', 'jsdir "gp/"') # 'jsdir "https://gnuplot.sourceforge.net/demo_svg_5.0/"'
+      self.jsdir = kwargs.pop('jsdir', 'jsdir "%s"'% self._jsdir)
       self.cleanup = kwargs.pop('cleanup', True)
       self.canvasnum = 0
       return super().__init__(*args, **kwargs)
 
    def _plot(self, *args, **kwargs):
       self.canvasnum += 1
+      uri = self.uri
       canvasname = "fishplot_%s" % self.canvasnum
       term = {'svg': 'svg mouse %s' % self.jsdir,
               'svg5': 'svg mouse standalone name "bla"',
@@ -260,28 +308,39 @@ class Iplot(Gplot):
              }.get(self.suffix, 'pngcairo') + ' ' + self.opt
       # png + no_uri, Image still converts into uri -> but works
       # png + uri, Image still converts into uri -> works
-      # svg + local_svg, mousing work
+      # svg + local_svg, mousing works
       # svg + no_uri, as inline
       # svg + uri, as inline
-      # html + no_uri
-      # html + uri -> work
+      # html + no_uri (if cleanup=False, the browser can read the file)
+      # html + uri -> works
       imgfile = tempfile.NamedTemporaryFile(suffix='.'+self.suffix).name
-      if self.suffix=='svg' and not self.uri:
+      if self.suffix=='svg' and not uri:
          # use a local file
-         imgfile = 'simple_%s.svg' % self.canvasnum # c
+         imgfile = 'simple_%s.svg' % self.canvasnum
       if self.suffix=='html':
          imgfile = canvasname + '.js'
-      # cleanup if already exists
-      os.system("rm -f "+imgfile)
 
-      if self.uri:
+      if uri:
+         # cleanup if already exists
+         os.system("rm -f "+imgfile)
          os.mkfifo(imgfile)
 
       self.term(term).out('"%s"' % imgfile)
+      if uri:
+         # the fifo needs something to read; but display will finally open and read imgfile
+         fifo = open(imgfile, 'r')
       super()._plot(*args, **kwargs)
       self.out()
 
-      if not self.uri:
+      if uri:
+         1
+         #imgdata = fifo.read()
+         #imgfile = 'data:image/png;base64,'+
+         #imgdata = open(imgfile, "rb").read() # png needs rb, but imgfile can be also passed directly 
+         #imgdata.replace('<svg ','<script type="text/javascript" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="./gp/gnuplot_svg.js"></script>\n<svg ')
+         #import base64
+         #print (base64.b64encode(imgdata).decode('ascii')[-10:])
+      if not uri:
          import time
          counter = 0
          while counter<100 and not (os.path.exists(imgfile) and os.system("lsof "+imgfile)):
@@ -291,45 +350,45 @@ class Iplot(Gplot):
          if not self.cleanup:
             print(counter, imgfile, os.path.exists(imgfile), os.system("lsof "+imgfile))
 
+      imgdata = imgfile
+
       from IPython.display import Image, SVG, HTML, Javascript
       showfunc = {'svg':SVG, 'html':HTML}.get(self.suffix, Image)
-      imgdata = imgfile
-      if self.uri:
-         1
-         #imgfile = 'data:image/png;base64,'+
-         #imgdata = open(imgfile, "rb").read() # png needs rb, but imgfile can be also passed directly 
-         #imgdata.replace('<svg ','<script type="text/javascript" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="./gp/gnuplot_svg.js"></script>\n<svg ')
-         #import base64
-         #print (base64.b64encode(imgdata).decode('ascii')[-10:])
 
       if self.suffix=='svg':
-         if not self.uri:
+         if not uri:
             showfunc = HTML
             imgdata = '<embed src="%s" type="image/svg+xml">' % imgfile
          else:
             showfunc = HTML
             imgdata = open(imgfile).read() # .replace("onload","onclick")
             # to get mousing in chrome uncomment in gnuplot_svg.js:63
-            # // p.x = evt.pageX; p.y = evt.pageY; 
+            # // p.x = evt.pageX; p.y = evt.pageY;
+            if self._jsdir.startswith("http://"):
+               from urllib.request import urlopen
+               gnuplot_svg_js = urlopen(self._jsdir+"gnuplot_svg.js").read().decode('utf-8')
+            else:
+               gnuplot_svg_js = open(self._jsdir+"gnuplot_svg.js").read()
+            gnuplot_svg_js.replace("documentElement", 'getElementsByTagName("svg")[0]')
             imgdata = ('''
     Inline SVG1
-     <script> 
-''' +open("gnuplot_svg.js").read().replace("documentElement", 'getElementsByTagName("svg")[0]') + '''
+     <script>
+''' + gnuplot_svg_js + '''
         // manually gnuplot_svg.Init (onload does not fire?)
         gnuplot_svg.SVGDoc = document.getElementsByTagName("svg")[0];
         console.log(gnuplot_svg.SVGRoot, gnuplot_svg.SVGDoc);
      </script>
     <object>
-            ''' + imgdata + '</object')
+            ''' + imgdata + '</object>')
 
       if self.suffix=='html':
-         if self.uri:
+         if uri:
             imgdata = '<script>%s</script>' % open(imgfile).read()
          else:
             imgdata = '''<script src="%s"></script>''' % imgfile
          # style the buttons and work around some mousing issues 
          imgdata = '''
-         <link rel="stylesheet" href="%sgp/gnuplot_mouse.css" type="text/css">
+         <link rel="stylesheet" href="%sgnuplot_mouse.css" type="text/css">
 <style>
    img.icon-image {
       max-width: None !important;
@@ -363,11 +422,11 @@ class Iplot(Gplot):
     <td style="border:0;">
     <table class="mbright" tabindex=0>
     <tr>
-      <td class="icon" onclick="gnuplot.toggle_grid();"><img src="grid.png" id="gnuplot_grid_icon" class="icon-image" alt="#" title="toggle grid"></td>
-      <td class="icon" onclick="gnuplot.unzoom();"><img src="previouszoom.png" id="gnuplot_unzoom_icon" class="icon-image" alt="unzoom" title="unzoom"></td>
-      <td class="icon" onclick="gnuplot.rezoom();"><img src="nextzoom.png" id="gnuplot_rezoom_icon" class="icon-image" alt="rezoom" title="rezoom"></td>
-      <td class="icon" onclick="gnuplot.toggle_zoom_text();"><img src="textzoom.png" id="gnuplot_textzoom_icon" class="icon-image" alt="zoom text" title="zoom text with plot"></td>
-      <td class="icon" onclick="gnuplot.popup_help();"><img src="help.png" id="gnuplot_help_icon" class="icon-image" alt="?" title="help"></td>
+      <td class="icon" onclick="gnuplot.toggle_grid();"><img src="%sgrid.png" id="gnuplot_grid_icon" class="icon-image" alt="#" title="toggle grid"></td>
+      <td class="icon" onclick="gnuplot.unzoom();"><img src="%spreviouszoom.png" id="gnuplot_unzoom_icon" class="icon-image" alt="unzoom" title="unzoom"></td>
+      <td class="icon" onclick="gnuplot.rezoom();"><img src="%snextzoom.png" id="gnuplot_rezoom_icon" class="icon-image" alt="rezoom" title="rezoom"></td>
+      <td class="icon" onclick="gnuplot.toggle_zoom_text();"><img src="%stextzoom.png" id="gnuplot_textzoom_icon" class="icon-image" alt="zoom text" title="zoom text with plot"></td>
+      <td class="icon" onclick="gnuplot.popup_help();"><img src="%shelp.png" id="gnuplot_help_icon" class="icon-image" alt="?" title="help"></td>
       <td class="icon"></td>
       <td class="mb0">x&nbsp;</td> <td class="mb1"><span id="%s_x">&nbsp;NaN&nbsp;</span></td>
       <td class="mb0">y&nbsp;</td> <td class="mb1"><span id="%s_y">&nbsp;NaN&nbsp;</span></td>
@@ -396,13 +455,16 @@ class Iplot(Gplot):
            $('body').on('contextmenu', '#%s', function(e){ return false; });
       </script>
       
-            ''' % (("","","","", imgdata) + (canvasname,)*12)
+            ''' % ((self._jsdir,)*4 + (imgdata,) + (self._jsdir,)*5 + (canvasname,)*12)
 
+      #print(imgdata)
       img = showfunc(imgdata)
-      if self.cleanup:
+      if self.cleanup and not (self.suffix=='svg' and not uri):
          os.system("rm -f "+imgfile)
          # print(counter, end='\r')
          # print(counter, imgfile, os.path.exists(imgfile), os.system("lsof "+imgfile))
+      else:
+         print(imgfile)
       return img
 
 # a default instance
