@@ -296,7 +296,7 @@ class Iplot(Gplot):
       self.jsdir = kwargs.pop('jsdir', 'jsdir "%s"'% self._jsdir)
       self.cleanup = kwargs.pop('cleanup', True)
       self.canvasnum = 0
-      return super().__init__(*args, **kwargs)
+      return super(Iplot, self).__init__(*args, **kwargs)
 
    def _plot(self, *args, **kwargs):
       self.canvasnum += 1
