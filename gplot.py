@@ -329,7 +329,7 @@ class Iplot(Gplot):
       if uri:
          # the fifo needs something to read; but display will finally open and read imgfile
          fifo = open(imgfile, 'r')
-      super()._plot(*args, **kwargs)
+      super(Iplot, self)._plot(*args, **kwargs)
       self.out()
 
       if uri:
