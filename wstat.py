@@ -572,7 +572,7 @@ def mlrms(y, e, s=0., verbose=False, ml=True, ret_mean=False):
       Start guess for jitter.
    ml : boolean, optional
       If true, iterate towards maximum likelihood. If false, iterate for chi_red=1.
-   Y : boolean, optional
+   ret_mean : boolean, optional
       If true, the reweighted mean is returned.
 
    Returns
