@@ -13,3 +13,11 @@ See [wiki/gplot.py](https://github.com/mzechmeister/python/wiki/gplot.py) for mo
 
 It works also with Jupyter ([gplot_demo.ipynb](https://github.com/mzechmeister/python/blob/master/gplot_demo.ipynb)).
 
+### installation of gplot.py
+
+Create a folder and run there
+
+```bash
+wget https://raw.githubusercontent.com/mzechmeister/python/master/gplot.py
+python -c "import setuptools; setuptools.setup(name='gplot')" develop --user
+```
