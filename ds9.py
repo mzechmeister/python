@@ -1,6 +1,8 @@
 from __future__ import print_function
 
 import subprocess
+import numpy as np
+
 try:
    import pyfits
 except:
@@ -91,14 +93,15 @@ def ds9msk(mask, bx=None, by=None, limit=15000, box=True, **kwargs):
    --------
    >>> z = np.arange(20).reshape(5,4)
    >>> ds9(z)
-   >>> ds9msk((z % 7)==0) #, /clear
+   >>> ds9msk((z % 7)==0) #, clear=True
 
    """
    idx = np.where(mask)
    if idx[0].size>limit:
       print("WARNING: Too many flagged pixels", idx[0].size, "(limit: %s)"%limit)
       return
-   ods9(*idx, bx, by, box=box, **kwargs)
+   #ods9(*idx, bx, by, box=box, **kwargs)
+   ods9(idx[1], idx[0], bx, by, box=box, **kwargs)
 
 
 def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False, reset=False, label=False, tag1=None, tag2=None, regfile=None, color=None, pt=False, box=False, circle=False, curve=False, line=False, point=False, polygon=False, x=False, cross=False, red=False, blue=False, green=False, clear=False, header=False):
