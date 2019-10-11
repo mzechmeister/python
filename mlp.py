@@ -769,18 +769,18 @@ if __name__ == "__main__":
   argadd = parser.add_argument   # function short cut
   argadd('df', nargs='*',
                  help='Data file (three columns: time, data, error). If not specified example will be shown.')
-  argadd('--fbeg', type=float, help="Starting frequency for periodogram.")
-  argadd('--fend', type=float, help="Stopping frequency for periodogram.")
-  argadd('--Pbeg', type=float, help="Starting period for periodogram.")
-  argadd('--Pend', type=float, help="Stopping period for periodogram.")
-  argadd('--ofac', type=float, help="Oversampling factor (default=10).", default=10)
-  argadd('--hifac', type=float, help="Maximum frequency (default=1).", default=1)
-  argadd('--fast', help="Use trigonometric recurrences.", action='store_true')
-  argadd('--nojit', help="Optimise jitter.", dest='jit', action='store_false')
-  argadd('--norm', help="The normalization (default=dlnL).", choices=Gls.norms, default='dlnL')
-  argadd('--ofile', type=str, help="Output file for results.")
-  argadd('--noplot', help="Suppress plots.", dest='plot', action='store_false')
-  argadd('--nostat', help="Switch off statistical output on screen.", dest='verbose',
+  argadd('-fbeg', '--fbeg', type=float, help="Starting frequency for periodogram.")
+  argadd('-fend', '--fend', type=float, help="Stopping frequency for periodogram.")
+  argadd('-Pbeg', '--Pbeg', type=float, help="Starting period for periodogram.")
+  argadd('-Pend', '--Pend', type=float, help="Stopping period for periodogram.")
+  argadd('-ofac', '--ofac', type=float, help="Oversampling factor (default=10).", default=10)
+  argadd('-hifac', '--hifac', type=float, help="Maximum frequency (default=1).", default=1)
+  argadd('-fast', '--fast', help="Use trigonometric recurrences.", action='store_true')
+  argadd('-nojit', '--nojit', help="Optimise jitter.", dest='jit', action='store_false')
+  argadd('-norm', '--norm', help="The normalization (default=dlnL).", choices=Gls.norms, default='dlnL')
+  argadd('-ofile', '--ofile', type=str, help="Output file for results.")
+  argadd('-noplot', '--noplot', help="Suppress plots.", dest='plot', action='store_false')
+  argadd('-nostat', '--nostat', help="Switch off statistical output on screen.", dest='verbose',
                  action='store_false')
   argadd('-?', '-h', '-help', '--help', help='Show this help message and exit.', action='help')
 
