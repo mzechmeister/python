@@ -38,7 +38,13 @@ from pause import *
 from gplot import *
 from scipy import optimize as op
 
-__version__ = '2017-11-08'
+# for python3: emulate the nice python2 behaviour of map and zip
+xmap = map
+map = lambda *x: list(xmap(*x))
+xzip = zip
+zip = lambda *x: list(xzip(*x))
+
+__version__ = '2019-12-02'
 __author__ = 'Mathias Zechmeister, Stefan Czesla'
 
 def mod_abc(x, a):
@@ -297,7 +303,7 @@ class Gls:
         global L, chisqr, wtrms 
         nll = lambda *args: -self.lnL(*args)
         #a0 = [0.]*self.Nj + [3.]*self.Nj # start guess for first frequency
-        a0 = map(np.mean, self.y) + map(np.std, self.y) 
+        a0 = map(np.mean, self.y) + map(np.std, self.y)
         print(a0)
 
         # The model with only offset c
@@ -500,7 +506,6 @@ class Gls:
            print("Offset %d:             %f +/- %f" % (j, off, self.hpstat["offset_err"]))
         #for j,jit in enumerate(self.hpstat["jitter"]:
         #   print("Jitter %d:             %f +/- %f" % (j, jit, self.hpstat["offset_err"]))
-        pause()
         print("-----------------------------------")
 
     def plot(self, block=False, period=False):
@@ -509,8 +514,6 @@ class Gls:
         """
         try:
             import matplotlib
-            if (matplotlib.get_backend() != "TkAgg"):
-                matplotlib.use("TkAgg")
             import matplotlib.pyplot as plt
             from matplotlib.ticker import FormatStrFormatter
         except ImportError:
@@ -588,7 +591,6 @@ class Gls:
            plt.ion()
         plt.show()
         # plt.show(block=block) # unexpected keyword argument 'block' in older matplotlib
-        pause()
         return plt
 
     def prob(self, Pn):
