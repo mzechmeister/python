@@ -170,7 +170,6 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
    """
 
    #if n_params() lt 2 then message, '% ods9: no data to display'
-   import numpy as np
    #args = str(np.array(cx)+1) + ', ' + str(np.array(cy)+1)
    if not offx: offx = 1 if coord is None else 0
    if not offy: offy = 1 if coord is None else 0
@@ -236,7 +235,8 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
          if hasattr(iopt, "__iter__") and not isinstance(iopt, str):
             opt.arg += (iopt,)
             opt.fmt += fmt
-         else: opt.fmt +=  fmt%iopt
+         else:
+            opt.fmt += fmt%iopt
 
    optappend(color, ' color=%s')
    optappend(tag1, ' tag={%s}')
@@ -247,9 +247,7 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
    if opt.fmt: opt.fmt = '# ' + opt.fmt
 
    print(fmt, args+opt.arg)
-   #from pause import stop; stop()
    lines = [(pt+'('+fmt+')'+opt.fmt)%a for a in zip(*(args+opt.arg))]
-   print(lines)
 
    #if n_elements(lines) eq 1 then lines = [lines] ; ensure array
 
