@@ -221,7 +221,7 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
    #if arg1: args += ','+arg1
    for arg in [arg1, arg2]:
       if arg:
-        if "__iter__" in dir(arg):
+        if hasattr(arg, "__iter__") and not isinstance(arg, str):
            args += (arg,)
            fmt += "%s"
         else:
@@ -233,7 +233,7 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
 
    def optappend(iopt, fmt):
       if iopt:
-         if "__iter__" in dir(iopt):
+         if hasattr(iopt, "__iter__") and not isinstance(iopt, str):
             opt.arg += (iopt,)
             opt.fmt += fmt
          else: opt.fmt +=  fmt%iopt
@@ -247,7 +247,9 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
    if opt.fmt: opt.fmt = '# ' + opt.fmt
 
    print(fmt, args+opt.arg)
+   #from pause import stop; stop()
    lines = [(pt+'('+fmt+')'+opt.fmt)%a for a in zip(*(args+opt.arg))]
+   print(lines)
 
    #if n_elements(lines) eq 1 then lines = [lines] ; ensure array
 
