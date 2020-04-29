@@ -9,8 +9,8 @@ except:
    import astropy.io.fits as pyfits
 
 __author__ = 'Mathias Zechmeister'
-__version__= '2.00'
-__date__ = '2018-10-22'
+__version__= '2.10'
+__date__ = '2020-04-29'
 
 
 def ds9(data, tmpfile='-', port='pyds9'):
@@ -38,7 +38,7 @@ def ds9(data, tmpfile='-', port='pyds9'):
    elif tmpfile=='-':
       # data.T because fortran-like
       dim = ",".join("%sdim=%i" % b for b in zip(('x','y','z'),data.T.shape))
-      dim += ",bitpix=%i" % {'bool':8, 'int64':64, 'int32':32, 'float64':-64, 'float32':-32}[data.dtype.name]
+      dim += ",bitpix=%i" % {'bool':8, 'int64':64, 'int32':32, 'uint16':16,'float64':-64, 'float32':-32}[data.dtype.name]
       endian = data.dtype.byteorder
       if endian in '<>':
          dim += ",endian=[%s]" % {'<':'little', '>':'big'}[endian]
@@ -57,7 +57,6 @@ def ds9(data, tmpfile='-', port='pyds9'):
    if ports=='':
       # switch to normal start and create a new port
       if tmpfile=='-':
-         #pause('ds9')
          pipeds9 = subprocess.Popen(['ds9  -analysis ~/.ds9.ans -title '+port+" -port 0 -array -'["+dim+"]' "], shell=True, stdin=subprocess.PIPE)
 #           +ds9opt+"  2> /dev/null &", unit=unit
          # data.tofile(pipeds9.stdin) # raises in python3: "OSError: obtaining file position failed"
@@ -104,7 +103,7 @@ def ds9msk(mask, bx=None, by=None, limit=15000, box=True, **kwargs):
    ods9(idx[1], idx[0], bx, by, box=box, **kwargs)
 
 
-def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False, reset=False, label=False, tag1=None, tag2=None, regfile=None, color=None, pt=False, box=False, circle=False, curve=False, line=False, point=False, polygon=False, x=False, cross=False, red=False, blue=False, green=False, clear=False, header=False):
+def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False, reset=False, label=False, tag1=None, tag2=None, regfile=None, color=None, pt=False, box=False, circle=False, curve=False, line=False, point=False, polygon=False, x=False, cross=False, red=False, blue=False, green=False, clear=False, header=[], coord=None, offx=None, offy=None):
    """
    Overplot data point in ds9 as a region file
 
@@ -173,9 +172,12 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
    #if n_params() lt 2 then message, '% ods9: no data to display'
    import numpy as np
    #args = str(np.array(cx)+1) + ', ' + str(np.array(cy)+1)
-   args = ([x+1 for x in cx], [y+1 for y in cy])
+   if not offx: offx = 1 if coord is None else 0
+   if not offy: offy = 1 if coord is None else 0
 
-   fmt= "%s,%s"
+   args = ([x+offx for x in cx], [y+offy for y in cy])
+
+   fmt = "%s,%s"
    opt = type('opt',(),{'arg':(), 'fmt':''})
 
    #; sarg1=0 means arg1 is of type size/width/length.
@@ -199,12 +201,11 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
       #pt = 'line'
       #args = args[0:*] + ',' + args[1:*]
    #endif
-   #if keyword_set(line) then begin
-      #pt = ' line'
-      #sarg1 = 1
-      #sarg2 = 1
-      #if size(line,/tname) eq 'STRING' then opt += 'line='+line
-   #endif
+   if line:
+      pt = 'line'
+      args += ([x+offx for x in arg1], [y+offy for y in arg2])
+      fmt += ",%s,%s"
+      arg1 = arg2 = None
 
    #if keyword_set(cross) then point = 'cross'
    #if keyword_set(x) then point = 'x'
@@ -241,23 +242,17 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
    optappend(tag1, ' tag={%s}')
    optappend(label, ' text={%s}')
 
-   #if color:
-      #if "__iter__" in dir(color):
-         #opt += (color,)
-         #optfmt += ' color=%s'
-      #else: optfmt += ' color='+color
-
    if not pt: pt = 'cross point'
 
    if opt.fmt: opt.fmt = '# ' + opt.fmt
 
-   #lines = "".join((pt+'('+fmt+')'+opt.fmt+'\n')%a for a in zip(*(args+opt.arg)))
+   print(fmt, args+opt.arg)
    lines = [(pt+'('+fmt+')'+opt.fmt)%a for a in zip(*(args+opt.arg))]
 
    #if n_elements(lines) eq 1 then lines = [lines] ; ensure array
 
-   if header: lines = header + lines
-   lines = "\n".join(lines)
+   coord = [coord] if coord else []
+   lines = "\n".join(header + coord + lines)
 
    # check if the port exists
    ports, xpamiss = subprocess.Popen("xpaget xpans | grep 'DS9 "+port+"'", shell=True, stdout=subprocess.PIPE, stderr= subprocess.PIPE, universal_newlines=True, bufsize=0).communicate()
