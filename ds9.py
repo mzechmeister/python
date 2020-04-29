@@ -9,11 +9,26 @@ except:
    import astropy.io.fits as pyfits
 
 __author__ = 'Mathias Zechmeister'
-__version__= '2.10'
+__version__= '2.20'
 __date__ = '2020-04-29'
 
 
-def ds9(data, tmpfile='-', port='pyds9'):
+
+class DS9:
+   def __call__(self, *args, **kwargs):
+       _ds9(*args, **kwargs)
+   def line(self, *args, **kwargs):
+       ods9(*args, line=True, **kwargs)
+   def box(self, *args, **kwargs):
+       ods9(*args, box=True, **kwargs)
+   def circle(self, *args, **kwargs):
+       ods9(*args, circle=True, **kwargs)
+   def msk(self, *args, **kwargs):
+       ds9msk(*args, **kwargs)
+
+ds9 = DS9()
+
+def _ds9(data, tmpfile='-', port='pyds9'):
    """
    Pipes data and commands to ds9.
 
@@ -101,6 +116,7 @@ def ds9msk(mask, bx=None, by=None, limit=15000, box=True, **kwargs):
       return
    #ods9(*idx, bx, by, box=box, **kwargs)
    ods9(idx[1], idx[0], bx, by, box=box, **kwargs)
+
 
 
 def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False, reset=False, label=False, tag1=None, tag2=None, regfile=None, color=None, pt=False, box=False, circle=False, curve=False, line=False, point=False, polygon=False, x=False, cross=False, red=False, blue=False, green=False, clear=False, header=[], coord=None, offx=None, offy=None):
