@@ -9,8 +9,8 @@ except:
    import astropy.io.fits as pyfits
 
 __author__ = 'Mathias Zechmeister'
-__version__= '2.20'
-__date__ = '2020-04-29'
+__version__= '2.21'
+__date__ = '2020-05-01'
 
 
 
@@ -25,6 +25,19 @@ class DS9:
        ods9(*args, circle=True, **kwargs)
    def msk(self, *args, **kwargs):
        ds9msk(*args, **kwargs)
+   def set(self, arg1, arg2='', port='pyds9'):
+#      for arg in args:
+         subprocess.call('xpaset -p '+port+' '+arg1+' '+arg2, shell=True)
+   def __getattr__(self, name):
+      # generic translatation, e.g. ds9.cmap sends "cmap"
+      if name in ('__repr__', '__str__'):
+         raise AttributeError
+      else:
+         # dynamic attributes (xlabel, key, etc.)
+         def func(*args):
+            return self.set(name, *args)
+         return func
+
 
 ds9 = DS9()
 
