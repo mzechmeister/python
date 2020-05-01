@@ -132,7 +132,7 @@ def ds9msk(mask, bx=None, by=None, limit=15000, box=True, **kwargs):
 
 
 
-def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False, reset=False, label=False, tag1=None, tag2=None, regfile=None, color=None, pt=False, box=False, circle=False, curve=False, line=False, point=False, polygon=False, x=False, cross=False, red=False, blue=False, green=False, clear=False, header=[], coord=None, offx=None, offy=None):
+def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False, reset=False, label=False, tag1=None, tag2=None, regfile=None, color=None, pt=False, box=False, circle=False, curve=False, line=False, point=False, polygon=False, x=False, cross=False, red=False, blue=False, green=False, clear=False, header=[], coord=None, size=None, optsuf=None, offx=None, offy=None):
    """
    Overplot data point in ds9 as a region file
 
@@ -267,9 +267,11 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
          else:
             opt.fmt += fmt%iopt
 
+   optappend(size, ' %s')
    optappend(color, ' color=%s')
    optappend(tag1, ' tag={%s}')
    optappend(label, ' text={%s}')
+   optappend(optsuf, ' %s')
 
    if not pt: pt = 'cross point'
 
