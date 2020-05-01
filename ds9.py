@@ -25,17 +25,18 @@ class DS9:
        ods9(*args, circle=True, **kwargs)
    def msk(self, *args, **kwargs):
        ds9msk(*args, **kwargs)
-   def set(self, arg1, arg2='', port='pyds9'):
+   def set(self, *args, **kwargs):
 #      for arg in args:
-         subprocess.call('xpaset -p '+port+' '+arg1+' '+arg2, shell=True)
+#         subprocess.call('xpaset -p %s %s' % (port, args), shell=True)
+       subprocess.call('xpaset -p '+kwargs.get('port','pyds9') + " %s"*len(args) % args, shell=True)
    def __getattr__(self, name):
       # generic translatation, e.g. ds9.cmap sends "cmap"
       if name in ('__repr__', '__str__'):
          raise AttributeError
       else:
-         # dynamic attributes (xlabel, key, etc.)
+         # dynamic attributes (pan_to, cmap, etc.)
          def func(*args):
-            return self.set(name, *args)
+            return self.set(name.replace("_"," "), *args)
          return func
 
 
@@ -202,6 +203,13 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
    #args = str(np.array(cx)+1) + ', ' + str(np.array(cy)+1)
    if not offx: offx = 1 if coord is None else 0
    if not offy: offy = 1 if coord is None else 0
+
+   # convert to list if scalar
+   try:
+      float(cx), float(cy)
+      cx, cy = [cx], [cy]
+   except:
+      pass
 
    args = ([x+offx for x in cx], [y+offy for y in cy])
 
