@@ -202,11 +202,8 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
    if not offy: offy = 1 if coord is None else 0
 
    # convert to list if scalar
-   try:
-      float(cx), float(cy)
+   if not hasattr(cx, "__iter__"):
       cx, cy = [cx], [cy]
-   except:
-      pass
 
    args = ([x+offx for x in cx], [y+offy for y in cy])
 
