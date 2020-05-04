@@ -9,22 +9,22 @@ except:
    import astropy.io.fits as pyfits
 
 __author__ = 'Mathias Zechmeister'
-__version__= '2.21'
-__date__ = '2020-05-01'
+__version__= '2.22'
+__date__ = '2020-05-04'
 
 
 
 class DS9:
-   def __call__(self, *args, **kwargs):
-       _ds9(*args, **kwargs)
-   def line(self, *args, **kwargs):
-       ods9(*args, line=True, **kwargs)
-   def box(self, *args, **kwargs):
-       ods9(*args, box=True, **kwargs)
-   def circle(self, *args, **kwargs):
-       ods9(*args, circle=True, **kwargs)
-   def msk(self, *args, **kwargs):
-       ds9msk(*args, **kwargs)
+   def __call__(self, *_, **__):
+       _ds9(*_, **__)
+   def line(self, *_, **__):
+       ods9(*_, line=True, **__)
+   def box(self, *_, **__):
+       ods9(*_, box=True, **__)
+   def circle(self, *_, **__):
+       ods9(*_, circle=True, **__)
+   def msk(self, *_, **__):
+       ds9msk(*_, **__)
    def set(self, *args, **kwargs):
 #      for arg in args:
 #         subprocess.call('xpaset -p %s %s' % (port, args), shell=True)
@@ -62,12 +62,12 @@ def _ds9(data, tmpfile='-', port='pyds9'):
 
    """
    # check if the port exists or create a new instance
-   if type(data) is str:
+   if isinstance(data, str):
       tmpfile = data
    elif tmpfile=='-':
       # data.T because fortran-like
       dim = ",".join("%sdim=%i" % b for b in zip(('x','y','z'),data.T.shape))
-      dim += ",bitpix=%i" % {'bool':8, 'int64':64, 'int32':32, 'uint16':16,'float64':-64, 'float32':-32}[data.dtype.name]
+      dim += ",bitpix=%i" % dict(bool=8, int64=64, int32=32, uint16=16, float64=-64, float32=-32)[data.dtype.name]
       endian = data.dtype.byteorder
       if endian in '<>':
          dim += ",endian=[%s]" % {'<':'little', '>':'big'}[endian]
@@ -85,7 +85,7 @@ def _ds9(data, tmpfile='-', port='pyds9'):
 
    if ports=='':
       # switch to normal start and create a new port
-      if tmpfile=='-':
+      if tmpfile == '-':
          pipeds9 = subprocess.Popen(['ds9  -analysis ~/.ds9.ans -title '+port+" -port 0 -array -'["+dim+"]' "], shell=True, stdin=subprocess.PIPE)
 #           +ds9opt+"  2> /dev/null &", unit=unit
          # data.tofile(pipeds9.stdin) # raises in python3: "OSError: obtaining file position failed"
@@ -94,7 +94,7 @@ def _ds9(data, tmpfile='-', port='pyds9'):
       else:
          subprocess.call('xds9 -p '+port+' '+tmpfile+' &', shell=True)
    else:
-      if tmpfile=='-':
+      if tmpfile == '-':
          subprocess.call('xpaset -p '+port+' frame new', shell=True)
          pipeds9 = subprocess.Popen(['xpaset '+port+" array -'["+dim+"']"], shell=True, stdin=subprocess.PIPE)
          #data.tofile(pipeds9.stdin)
@@ -125,10 +125,9 @@ def ds9msk(mask, bx=None, by=None, limit=15000, box=True, **kwargs):
 
    """
    idx = np.where(mask)
-   if idx[0].size>limit:
+   if idx[0].size > limit:
       print("WARNING: Too many flagged pixels", idx[0].size, "(limit: %s)"%limit)
       return
-   #ods9(*idx, bx, by, box=box, **kwargs)
    ods9(idx[1], idx[0], bx, by, box=box, **kwargs)
 
 
@@ -199,8 +198,6 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
 #;-
    """
 
-   #if n_params() lt 2 then message, '% ods9: no data to display'
-   #args = str(np.array(cx)+1) + ', ' + str(np.array(cy)+1)
    if not offx: offx = 1 if coord is None else 0
    if not offy: offy = 1 if coord is None else 0
 
@@ -214,13 +211,10 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
    args = ([x+offx for x in cx], [y+offy for y in cy])
 
    fmt = "%s,%s"
-   opt = type('opt',(),{'arg':(), 'fmt':''})
+   opt = type('opt', (), {'arg':(), 'fmt':''})
 
    #; sarg1=0 means arg1 is of type size/width/length.
    #; sarg1=1 means arg1 is of type position and conversion from IDL-zeros to ds9-one based indexing is done
-   #sarg1 = 0
-   #sarg2 = 0
-   #sarg3 = 0
 
    if red: color = 'red'
    if blue: color = 'blue'
@@ -252,8 +246,6 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
       #args =  [strjoin(strtrim(cx+1,2 )+ ' ' + strtrim(cy+1,2),' ')]
    #endif
 
-   n = len(cx)
-   #print args
    #if arg1: args += ','+arg1
    for arg in [arg1, arg2]:
       if arg:
@@ -263,17 +255,13 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
         else:
            fmt += ","+str(arg)
 
-   #if n_elements(arg1) gt 0 then args += ', '+strtrim(arg1+sarg1,2)
-   #if n_elements(arg2) gt 0 then args += ', '+strtrim(arg2+sarg2,2)
-   #if n_elements(arg3) gt 0 then args += ', '+strtrim(arg3+sarg3,2)
-
    def optappend(iopt, fmt):
       if iopt:
          if hasattr(iopt, "__iter__") and not isinstance(iopt, str):
             opt.arg += (iopt,)
             opt.fmt += fmt
          else:
-            opt.fmt += fmt%iopt
+            opt.fmt += fmt % iopt
 
    optappend(size, ' %s')
    optappend(color, ' color=%s')
@@ -287,16 +275,13 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
 
    print(fmt, args+opt.arg)
    lines = [(pt+'('+fmt+')'+opt.fmt)%a for a in zip(*(args+opt.arg))]
-
-   #if n_elements(lines) eq 1 then lines = [lines] ; ensure array
-
    coord = [coord] if coord else []
    lines = "\n".join(header + coord + lines)
 
    # check if the port exists
    ports, xpamiss = subprocess.Popen("xpaget xpans | grep 'DS9 "+port+"'", shell=True, stdout=subprocess.PIPE, stderr= subprocess.PIPE, universal_newlines=True, bufsize=0).communicate()
 
-   if ports=='':
+   if ports == '':
       print('xpa misses: ', port)
       return
 
@@ -333,10 +318,6 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
       #free_lun, ounit
    #endelse
 
-
-
-
-   #pro ODS9, cx, cy, arg1, arg2, arg3, PORT=port, FRAME=frame, LASTFRAME=lastframe, RESET=reset, LABEL=label, TAG1=tag1, TAG2=tag2, REGFILE=regfile, COLOR=color, PT=pt, BOX=box, CIRCLE=circle, CURVE=CURVE, LINE=LINE, POINT=point, POLYGON=polygon, x=x, cross=cross, RED=red, BLUE=blue, GREEN=green, CLEAR=clear, header=header
 
 #;+
 #; NAME:
