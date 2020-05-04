@@ -29,6 +29,15 @@ class DS9:
 #      for arg in args:
 #         subprocess.call('xpaset -p %s %s' % (port, args), shell=True)
        subprocess.call('xpaset -p '+kwargs.get('port','pyds9') + " %s"*len(args) % args, shell=True)
+   def get(self, *args, **kwargs):
+       result, status = subprocess.Popen("xpaget "+kwargs.get('port','pyds9')+" %s"*len(args) % args, shell=True, stdout=subprocess.PIPE, stderr= subprocess.PIPE, universal_newlines=True, bufsize=0).communicate()
+       return result
+   def get_array(self, *args, **kwargs):
+       h = int(self.get('fits height'))
+       bitpix = int(self.get('fits bitpix'))
+       dt = {8:'bool', 64:'int64', 32:'int32', 16:'uint16', -64:'float64', -32:'float32'}[bitpix]
+       data = np.frombuffer(self.get('array', *args, **kwargs), dtype=dt)
+       return data.reshape((h,-1))
    def __getattr__(self, name):
       # generic translatation, e.g. ds9.cmap sends "cmap"
       if name in ('__repr__', '__str__'):
