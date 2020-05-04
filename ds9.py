@@ -23,6 +23,8 @@ class DS9:
        ods9(*_, box=True, **__)
    def circle(self, *_, **__):
        ods9(*_, circle=True, **__)
+   def text(self, cx, cy, text, **__):
+       ods9(cx, cy, pt="text", label=text, **__)
    def msk(self, *_, **__):
        ds9msk(*_, **__)
    def set(self, *args, **kwargs):
@@ -207,8 +209,8 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
 #;-
    """
 
-   if not offx: offx = 1 if coord is None else 0
-   if not offy: offy = 1 if coord is None else 0
+   if offx is None: offx = 1 if coord is None else 0
+   if offy is None: offy = 1 if coord is None else 0
 
    # convert to list if scalar
    if not hasattr(cx, "__iter__"):
