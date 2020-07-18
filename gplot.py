@@ -7,8 +7,8 @@ import tempfile
 import os
 
 __author__ = 'Mathias Zechmeister'
-__version__ = 'v14'
-__date__ = '2020-06-27'
+__version__ = 'v15'
+__date__ = '2020-07-17'
 __all__ = ['gplot', 'Gplot', 'ogplot', 'Iplot']
 
 
@@ -16,7 +16,7 @@ class Gplot(object):
    """
    An interface between Python and gnuplot.
    
-   Creation of an instance opens a pipe to gnuplot and return an object for communication.
+   Creation of an instance opens a pipe to gnuplot and returns an object for communication.
    Plot commands are send to gnuplot via the call method; arrays as arguments are handled.
    Gnuplot options are set by calling them as method attributes.
    Each method returns the object again. This allows to chain set and plot method.
@@ -25,8 +25,7 @@ class Gplot(object):
    ----------
    tmp : str, optional
        Method for passing data.
-       * '$' - use inline datablock (default) (not faster than temporary data,
-             does not work with flush='' an ogplot)
+       * '$' - use inline datablock (default) (not faster than temporary data)
        * None - create a non-persistent temporary file
        * '' - create a local persistent file
        * '-' - use gnuplot special filename (no interactive zoom available,
@@ -107,7 +106,11 @@ class Gplot(object):
       # with mouse zooming (see http://sourceforge.net/p/gnuplot/bugs/1203/)
       self.flush = flush
       pl = ''
+      buf = ''
       data = ()
+      if tmp in ('$',):
+           pl, self.buf = self.buf, pl
+
       for arg in args + (flush,):
          if isinstance(arg, str):   # append argument, but flush the data before
             if data:
@@ -122,7 +125,7 @@ class Gplot(object):
                   # gnuplot's inline datablock
                   tmpname = "$data%s" % self.og
                   # prepend the datablock
-                  pl = tmpname+" <<EOD\n"+("\n".join(" ".join(map(str,tup)) for tup in data))+"\nEOD\n" + pl
+                  buf += tmpname+" <<EOD\n"+("\n".join(" ".join(map(str,tup)) for tup in data))+"\nEOD\n"
                elif tmp is None:
                   # create temporary file; default
                   self.tmp2.append(tempfile.NamedTemporaryFile())
@@ -143,6 +146,11 @@ class Gplot(object):
             _1D = hasattr(arg, '__iter__')
             _2D = _1D and hasattr(arg[0], '__iter__') and not isinstance(arg[0], str)
             data += tuple(arg) if _2D else (arg,) if _1D else ([arg],)
+
+      if tmp in ('$',):
+          self.put(buf, end='')
+          self.buf += pl
+          pl = ''
       self.put(pl, end='')
       if flush!='': self.put(self.buf, end='')
 
@@ -194,7 +202,7 @@ class Gplot(object):
       else:
          # dynamic attributes (xlabel, key, etc.)
          def func(*args):
-            # _ underscores are replace with blank, e.g. gplot.key_left_Left()
+            # _ underscores are replaced with blanks, e.g. gplot.key_left_Left()
             return self.set(name.replace("_"," "), *args)
          return func
 
