@@ -7,8 +7,8 @@ import tempfile
 import os
 
 __author__ = 'Mathias Zechmeister'
-__version__ = 'v15'
-__date__ = '2020-07-17'
+__version__ = 'v16'
+__date__ = '2020-08-05'
 __all__ = ['gplot', 'Gplot', 'ogplot', 'Iplot']
 
 
@@ -135,7 +135,7 @@ class Gplot(object):
                   self.tmp2[-1].seek(0)
                else:
                   # create local temporary file
-                  if tmp=='':
+                  if tmp == '':
                      tmpname = 'gptmp_'+str(self.pid)+str(self.og)
                   savetxt(tmpname, list(data), fmt="%s")
                pl += '"'+tmpname+'"'
@@ -152,7 +152,9 @@ class Gplot(object):
           self.buf += pl
           pl = ''
       self.put(pl, end='')
-      if flush!='': self.put(self.buf, end='')
+      if flush != '':
+          self.put(self.buf, end='')
+          self.buf = ''
 
    def put(self, *args, **kwargs):
       # send the commands to gnuplot
