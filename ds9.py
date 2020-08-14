@@ -9,18 +9,32 @@ except:
    import astropy.io.fits as pyfits
 
 __author__ = 'Mathias Zechmeister'
-__version__= '2.22'
-__date__ = '2020-05-04'
+__version__= '2.23'
+__date__ = '2020-08-14'
 
 
 
 class DS9:
+   """
+   Pipes data and commands to ds9.
+
+   Examples:
+   ---------
+   >>> from ds9 import *
+   >>> import numpy as np
+   >>> arr = np.arange(20).reshape(5,4)
+   >>> ds9(arr)
+   >>> ds9.curve([0,1,2,3,4], [0,0,2,1,4])
+
+   """
    def __call__(self, *_, **__):
        _ds9(*_, **__)
    def line(self, *_, **__):
        ods9(*_, line=True, **__)
    def box(self, *_, **__):
        ods9(*_, box=True, **__)
+   def curve(self, *_, **__):
+       ods9(*_, curve=True, **__)
    def circle(self, *_, **__):
        ods9(*_, circle=True, **__)
    def text(self, cx, cy, text, **__):
@@ -44,6 +58,8 @@ class DS9:
       # generic translatation, e.g. ds9.cmap sends "cmap"
       if name in ('__repr__', '__str__'):
          raise AttributeError
+      if name == 'doc':
+         print(self.__doc__)
       else:
          # dynamic attributes (pan_to, cmap, etc.)
          def func(*args):
@@ -235,10 +251,10 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
    if circle:
       pt = 'circle'
       if not arg1: arg1 = 2.5
-   #if keyword_set(curve) then begin
-      #pt = 'line'
-      #args = args[0:*] + ',' + args[1:*]
-   #endif
+   if curve:
+      pt = 'line'
+      args = (args[0][:-1], args[1][:-1], args[0][1:], args[1][1:])
+      fmt += ",%s,%s"
    if line:
       pt = 'line'
       args += ([x+offx for x in arg1], [y+offy for y in arg2])
