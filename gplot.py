@@ -195,11 +195,11 @@ class Gplot(object):
          raise AttributeError
       elif name=='repl':
          return self.replot()
-      elif name in ['load', 'set', 'show', 'unset', 'reset', 'print', 'bind']:
+      elif name.startswith(('load', 'set', 'show', 'unset', 'reset', 'print', 'bind')):
          # some fixed keywords
          # print as attribute does not work in python 2
          def func(*args):
-            return self.put(name, *args)
+            return self.put(name.replace("_"," "), *args)
          return func
       else:
          # dynamic attributes (xlabel, key, etc.)
