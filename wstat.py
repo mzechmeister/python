@@ -4,7 +4,7 @@ import sys
 import numpy as np
 # import doctest; doctest.run_docstring_examples(wstat.wsem, globals())
 
-einsum_bug = tuple(map(int, np.__version__.split("."))) < (1, 7, 0)
+einsum_bug = tuple(map(int, np.__version__.split(".")[:2])) < (1, 7)
 # Bugs (due to np.einsum) for moments>1 and dim not () and np._version <= 1.6.1
 """
       >>> np.__version__
