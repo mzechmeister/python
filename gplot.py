@@ -112,7 +112,7 @@ class Gplot(object):
            pl, self.buf = self.buf, pl
 
       for arg in args + (flush,):
-         if isinstance(arg, str):   # append argument, but flush the data before
+         if isinstance(arg, (str, unicode)):   # append argument, but flush the data before
             if data:
                # transpose data when writing
                data = zip(*data)
