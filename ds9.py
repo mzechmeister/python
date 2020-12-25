@@ -42,6 +42,10 @@ class DS9:
        ods9(cx, cy, pt="text", label=text, **__)
    def msk(self, *_, **__):
        ds9msk(*_, **__)
+   def show(self):
+       from IPython.display import Image
+       self.tcl("exec import -window [winfo id .] ids9tmp.png")
+       return Image('ids9tmp.png')
    def set(self, *args, **kwargs):
 #      for arg in args:
 #         subprocess.call('xpaset -p %s %s' % (port, args), shell=True)
@@ -114,7 +118,7 @@ def _ds9(data, tmpfile='-', port='pyds9', obj=None, frame=0):
    if ports == '':
       # switch to normal start and create a new port
       if tmpfile == '-':
-         pipeds9 = subprocess.Popen(['ds9  -analysis ~/.ds9.ans -title '+port+" -port 0 -array -'["+dim+"]' "], shell=True, stdin=subprocess.PIPE)
+         pipeds9 = subprocess.Popen(['ds9 -tcl yes -analysis ~/.ds9.ans -title '+port+" -port 0 -array -'["+dim+"]' "], shell=True, stdin=subprocess.PIPE)
 #           +ds9opt+"  2> /dev/null &", unit=unit
          # data.tofile(pipeds9.stdin) # raises in python3: "OSError: obtaining file position failed"
          pipeds9.stdin.write(data.tobytes())
