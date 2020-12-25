@@ -25,6 +25,7 @@ class DS9:
    >>> arr = np.arange(20).reshape(5,4)
    >>> ds9(arr)
    >>> ds9.curve([0,1,2,3,4], [0,0,2,1,4])
+   >>> ds9.cmap('bb')
 
    """
    def __call__(self, *_, **__):
@@ -69,7 +70,7 @@ class DS9:
 
 ds9 = DS9()
 
-def _ds9(data, tmpfile='-', port='pyds9'):
+def _ds9(data, tmpfile='-', port='pyds9', obj=None, frame=0):
    """
    Pipes data and commands to ds9.
 
@@ -94,7 +95,7 @@ def _ds9(data, tmpfile='-', port='pyds9'):
    elif tmpfile=='-':
       # data.T because fortran-like
       dim = ",".join("%sdim=%i" % b for b in zip(('x','y','z'),data.T.shape))
-      dim += ",bitpix=%i" % dict(bool=8, int64=64, int32=32, uint16=16, float64=-64, float32=-32)[data.dtype.name]
+      dim += ",bitpix=%i" % dict(bool=8, int64=64, int32=32, int16=16, uint16=-16, float64=-64, float32=-32)[data.dtype.name]
       endian = data.dtype.byteorder
       if endian in '<>':
          dim += ",endian=[%s]" % {'<':'little', '>':'big'}[endian]
@@ -110,7 +111,7 @@ def _ds9(data, tmpfile='-', port='pyds9'):
 
    ports, xpamiss = subprocess.Popen("xpaget xpans | grep 'DS9 "+port+"'", shell=True, stdout=subprocess.PIPE, stderr= subprocess.PIPE, universal_newlines=True, bufsize=0).communicate()
 
-   if ports=='':
+   if ports == '':
       # switch to normal start and create a new port
       if tmpfile == '-':
          pipeds9 = subprocess.Popen(['ds9  -analysis ~/.ds9.ans -title '+port+" -port 0 -array -'["+dim+"]' "], shell=True, stdin=subprocess.PIPE)
@@ -121,14 +122,24 @@ def _ds9(data, tmpfile='-', port='pyds9'):
       else:
          subprocess.call('xds9 -p '+port+' '+tmpfile+' &', shell=True)
    else:
-      if tmpfile == '-':
+      if frame > 0:
+         subprocess.call('xpaset -p '+port+' frame %s'%frame, shell=True)
+      elif frame == 0:
          subprocess.call('xpaset -p '+port+' frame new', shell=True)
+      else:
+         pass # all negative currently to the last frame
+
+      if tmpfile == '-':
          pipeds9 = subprocess.Popen(['xpaset '+port+" array -'["+dim+"']"], shell=True, stdin=subprocess.PIPE)
          #data.tofile(pipeds9.stdin)
          pipeds9.stdin.write(data.tobytes())
          pipeds9.stdin.close()
       else:
          subprocess.call('xds9 -p '+port+' '+tmpfile+' &', shell=True)
+
+   if obj:
+       # xpaset pyds9 wcs append <<< "OBJECT = 'GJ699'"
+       result, status = subprocess.Popen("xpaset "+port+" wcs append", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, universal_newlines=True, bufsize=0).communicate("OBJECT = '%s'" % obj)
 
 
 def ds9msk(mask, bx=None, by=None, limit=15000, box=True, **kwargs):
@@ -297,7 +308,7 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
 
    if opt.fmt: opt.fmt = '# ' + opt.fmt
 
-   print(fmt, args+opt.arg)
+   #print(fmt, args+opt.arg)
    lines = [(pt+'('+fmt+')'+opt.fmt)%a for a in zip(*(args+opt.arg))]
    coord = [coord] if coord else []
    lines = "\n".join(header + coord + lines)
@@ -324,7 +335,7 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
       #; wait, 0.01  ; somehow needed, due to buffering?
       #; flush, ounit ; does this helps ?
       #free_lun, ounit
-      print(lines)
+      #print(lines)
       pipeds9 = subprocess.Popen(['xpaset '+port+' regions'], shell=True, stdin=subprocess.PIPE, universal_newlines=True, bufsize=0)  # This line is needed for python3! Unbuffered and to pass str )
       pipeds9.communicate(lines)
    else:
