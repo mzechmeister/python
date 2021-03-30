@@ -7,8 +7,8 @@ import tempfile
 import os
 
 __author__ = 'Mathias Zechmeister'
-__version__ = 'v16'
-__date__ = '2020-08-05'
+__version__ = 'v17'
+__date__ = '2021-03-30'
 __all__ = ['gplot', 'Gplot', 'ogplot', 'Iplot']
 
 
@@ -33,6 +33,11 @@ class Gplot(object):
        * 'filename' - create manually a temporary file
    stdout : boolean, optional
        If true, plot commands are send to stdout instead to gnuplot pipe.
+   stderr : int, optional
+       Gnuplot prints errors and user prints to stderr (term output is sent to stdout). The
+       default stderr=None retains this behaviour. stderr=-1 (subprocess.PIPE) tries to
+       capture stderr so that the output can be redirected to the Jupyter cells instead of
+       parent console. This feature can be fragile and is experimental.
    mode : str, optional
        Primary command for the call method. The default is 'plot'. After creation it can
        be changed, e.g. gplot.mode = gplot.splot.
@@ -86,17 +91,22 @@ class Gplot(object):
    version = subprocess.check_output(['gnuplot', '-V'])
    version = float(version.split()[1]) 
    
-   def __init__(self, cmdargs='', tmp='$', mode='plot', stdout=False):
+   def __init__(self, cmdargs='', tmp='$', mode='plot', stdout=False, stderr=None):
       self.stdout = stdout
       self.tmp = tmp
       self.mode = getattr(self, mode)   # set the default mode for __call__ (plot, splot)
       self.gnuplot = subprocess.Popen('gnuplot '+cmdargs, shell=True, stdin=subprocess.PIPE,
-                   universal_newlines=True, bufsize=0)   # This line is needed for python3! Unbuffered and to pass str instead of bytes
+                   stderr=stderr, universal_newlines=True, bufsize=0)   # This line is needed for python3! Unbuffered and to pass str instead of bytes
       self.pid = self.gnuplot.pid
       self.og = 0   # overplot number
       self.buf = ''
       self.tmp2 = []
       self.flush = None
+      self.put = self._put
+      if stderr:
+          import fcntl
+          fcntl.fcntl(self.gnuplot.stderr, fcntl.F_SETFL, os.O_NONBLOCK)
+          self.put = self.PUT
    
    def _plot(self, *args, **kwargs):
       # collect all arguments
@@ -156,9 +166,31 @@ class Gplot(object):
           self.put(self.buf, end='')
           self.buf = ''
 
-   def put(self, *args, **kwargs):
+   def _put(self, *args, **kwargs):
       # send the commands to gnuplot
       print(file=None if self.stdout else self.gnuplot.stdin, *args, **kwargs)
+      return self
+
+   def PUT(self, *args, **kwargs):
+      # same a _put, but tries to catch stdout and stderr of gnuplot
+      #r,w = os.pipe()
+      #stdout = '/proc/%s/fd/%s' % (os.getpid(), w)
+      #f = os.fdopen(r, 'r')
+      #g = os.fdopen(w, 'w')
+      #self.gnuplot.stdin.write("set print '%s'\n"% stdout)
+      self._put(*args, **kwargs)
+      self.gnuplot.stdin.write('printerr ""\n')
+      # self.gnuplot.stdin.write("set print\n")
+      # g.close()
+      # s = f.read()
+      # f.close()
+      import time
+      try:
+          time.sleep(0.03) # if long the fifo cannot be read?
+          s = self.gnuplot.stderr.read()[:-1]
+          if s: print(s, end='')  # gnuplot already appends a newline
+      except:
+          pass
       return self
 
    # some plot commands (kwargs possible)
@@ -216,7 +248,7 @@ class Gplot(object):
       The plot will be update immediately. To pass flush='', use the __lt__
       method.
       '''
-      self.oplot(*other)
+      self.oplot(*other) if other else self._plot()
 
    def __sub__(self, other):
       '''Start a new plot, but do not flush.
@@ -288,7 +320,7 @@ class Iplot(Gplot):
       
       Examples
       --------
-      >>> iplot = Iplot(opt='size 300,200')
+      >>> iplot = Iplot(opt='size 300,200', stderr=-1)
       >>> iplot('x')
       
       NOTES
@@ -385,7 +417,6 @@ class Iplot(Gplot):
                gnuplot_svg_js = open(self._jsdir+"gnuplot_svg.js").read()
             gnuplot_svg_js.replace("documentElement", 'getElementsByTagName("svg")[0]')
             imgdata = ('''
-    Inline SVG1
      <script>
 ''' + gnuplot_svg_js + '''
         // manually gnuplot_svg.Init (onload does not fire?)
