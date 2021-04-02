@@ -272,7 +272,7 @@ def wstd(y, e, axis=None, dim=(), ret_err=False):
    s = None
    if dim:
       dim = [d[a] for a in dim]   # positive index
-      s = [slice(None) if (a in dim) else None for a in d]   # new shape (to broadcast mean)
+      s = tuple(slice(None) if (a in dim) else None for a in d)   # new shape (to broadcast mean)
 
    with np.errstate(divide='ignore'):
       nsum = np.einsum(ind.astype(float), d, dim)
