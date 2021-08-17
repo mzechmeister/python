@@ -67,13 +67,17 @@ def mod_c(x, a):
 class Gls:
     """
     Compute the Generalized Lomb-Scargle (GLS) periodogram.
+
     The *Gls* class computes the error-weighted Lomb-Scargle periodogram as
     developed by [ZK09]_ using various possible normalizations.
+
     The constructor of *Gls* takes a *TimeSeries* instance (i.e., a light curve)
     as first argument. The constructor allows to pass keywords to adjust the
     `freq` array, which will be used to calculate the periodogram.
+
     The main result of the calculation, i.e., the power, are stored in the
     class property `power`.
+
     Parameters
     ----------
     lc : TimeSeries object or tuple or list
@@ -107,6 +111,7 @@ class Gls:
         leading to faster evaluation (default is False).
     verbose : boolean, optional
         Set True to obtain some statistical output (default is False).
+
     Attributes
     ----------
     power : array
@@ -125,23 +130,28 @@ class Gls:
         The errors of the data values.
     norm : string, {'lnL', 'Scargle', 'HorneBaliunas', 'Cumming', 'wrms', 'chisq'}
         The used normalization.
+
     Examples
     --------
     Create 1000 unevenly sampled data points with frequency=0.1,
     measurement error and Gaussian noise
     >>> time = np.random.uniform(54000., 56000., 1000)
     >>> flux = 0.15 * np.sin(2. * np.pi * time / 10.)
+
     Add some noise
     >>> error = 0.3 * np.ones(time.size)
     >>> flux += np.random.normal(0, error+0.2)
+
     Compute the full error-weighted Lomb-Periodogram
     in 'lnL' normalization and calculate the significance
     of the maximum peak.
     >>> gls = Gls((time, flux, error), verbose=True)
+
     >>> maxPower = gls.pmax
     >>> print("GLS maximum power: ", maxPower)
     >>> print("GLS statistics of maximum power peak: ", gls.stats(maxPower))
     >>> gls.plot(block=True)
+
     """
     # Available normalizations
     norms = ['dlnL', 'lnL', 'Scargle', 'HorneBaliunas', 'Cumming', 'wrms', 'chisq']
@@ -181,6 +191,7 @@ class Gls:
     def _assignTimeSeries(self, lcs):
       """
       A container class that holds the observed light curve.
+
       Parameters
       ----------
       time : array
@@ -189,6 +200,7 @@ class Gls:
           The observed flux/data.
       error : array, optional
           The error of the data values.
+
       """
       self.t = []
       self.y = []
@@ -232,10 +244,12 @@ class Gls:
     def _buildFreq(self):
         """
         Build frequency array (`freq` attribute).
+
         Attributes
         ----------
         fnyq : float
             Half of the average sampling frequency of the time series.
+
         """
         self.fstep = 1 / self.tbase / self.ofac   # frequency sampling depends on the time span, default for start frequency
         self.fnyq = 0.5 / self.tbase * self.N     # Nyquist frequency
@@ -357,10 +371,12 @@ class Gls:
     def _normcheck(self, norm):
         """
         Check normalization
+
         Parameters
         ----------
         norm : string
             Normalization string
+
         """
         if norm not in self.norms:
             raise(ValueError("Unknown norm: " + str(norm) + ". " + \
@@ -369,13 +385,16 @@ class Gls:
     def pnorm(self, norm="dlnL"):
         """
         Assign or modify normalization (can be done afterwards).
+
         Parameters
         ----------
         norm : string, optional
             The normalization to be used (default is 'lnL').
+
         Examples
         --------
         >>> gls.pnorm('wrms')
+
         """
         self._normcheck(norm)
         self.norm = norm
@@ -451,10 +470,12 @@ class Gls:
     def sinmod(self, t):
         """
         Calcuate best-fit sine curve.
+
         Parameters
         ----------
         t : array
             Time array at which to calculate the sine.
+
         Returns
         -------
         Sine curve : array
@@ -613,28 +634,36 @@ class Gls:
     def prob(self, Pn):
         """
         Probability of obtaining the given power.
+
         Calculate the probability to obtain a power higher than
         `Pn` from the noise, which is assumed to be Gaussian.
+
         .. note:: Normalization
           (see [ZK09]_ for further details).
+
           - `Scargle`:
           .. math::
             exp(-Pn)
+
           - `HorneBaliunas`:
           .. math::
             \\left(1 - 2 \\times \\frac{Pn}{N-1} \\right)^{(N-3)/2}
+
           - `Cumming`:
           .. math::
             \\left(1+2\\times \\frac{Pn}{N-3}\\right)^{-(N-3)/2}
+
         Parameters
         ----------
         Pn : float
             Power threshold.
+
         Returns
         -------
         Probability : float
             The probability to obtain a power equal or
             higher than the threshold from the noise.
+
         """
         self._normcheck(self.norm)
         if self.norm == "lnL": return (1.-Pn)**((self.N-3.)/2.)
@@ -647,16 +676,20 @@ class Gls:
     def probInv(self, Prob):
         """
         Calculate minimum power for given probability.
+
         This function is the inverse of `Prob(Pn)`.
         Returns the minimum power for a given probability threshold `Prob`.
+
         Parameters
         ----------
         Prob : float
             Probability threshold.
+
         Returns
         -------
         Power threshold : float
             The minimum power for the given false-alarm probability threshold.
+
         """
         self._normcheck(self.norm)
         if self.norm == "lnL": return 1.-Prob**(2./(self.N-3.))
@@ -669,22 +702,28 @@ class Gls:
     def FAP(self, Pn):
         """
         Obtain the false-alarm probability (FAP).
+
         The FAP denotes the probability that at least one out of M independent
         power values in a prescribed search band of a power spectrum computed
         from a white-noise time series is as large as or larger than the
         threshold, `Pn`. It is assessed through
+
         .. math:: FAP(Pn) = 1 - (1-Prob(P>Pn))^M \\; ,
+
         where "Prob(P>Pn)" depends on the type of periodogram and normalization
         and is calculated by using the *prob* method; *M* is the number of
         independent power values and is computed internally.
+
         Parameters
         ----------
         Pn : float
             Power threshold.
+
         Returns
         -------
         FAP : float
             False alarm probability.
+
         """
         prob = self.M * self.prob(Pn)
         if prob > 0.01:
@@ -694,16 +733,19 @@ class Gls:
     def powerLevel(self, FAPlevel):
         """
         Power threshold for FAP level.
+
         Parameters
         ----------
         FAPlevel : float or array_like
               "False Alarm Probability" threshold
+
         Returns
         -------
         Threshold : float or array
             The power threshold pertaining to a specified false-alarm
             probability (FAP). Powers exceeding this threshold have FAPs
             smaller than FAPlevel.
+
         """
         Prob = 1. - (1.-FAPlevel)**(1./self.M)
         return self.probInv(Prob)
@@ -711,25 +753,30 @@ class Gls:
     def stats(self, Pn):
         """
         Obtain basic statistics for power threshold.
+
         Parameters
         ----------
         Pn : float
             Power threshold.
+
         Returns
         -------
         Statistics : dictionary
             A dictionary containing {'Pn': *Pn*, 'Prob': *Prob(Pn)* ,
             'FAP': *FAP(Pn)*} for the specified power threshold, *Pn*.
+
         """
         return {'Pn': Pn, 'Prob': self.prob(Pn), 'FAP': self.FAP(Pn)}
 
     def toFile(self, ofile, header=True):
         """
         Write periodogram to file.
+
         Parameters
         ----------
         ofile : string
             Name of the output file.
+
         """
         with open(ofile, 'w') as f:
             if header:
@@ -831,3 +878,5 @@ if __name__ == "__main__":
 #from gplot import*
 #gplot(ml.freq,ml.p,',',g.freq,g.p)
 #g.plot()
+
+
