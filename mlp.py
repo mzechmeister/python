@@ -445,7 +445,7 @@ class Gls:
         p["T0"]  = self.tmin - ph/fbest
         p["offset"] = self._off[k]
         #print(len(self.par),self.Nj)
-        p["jitter"] = self.par[0][-self.Nj:]
+        p["jitter"] = self.par[k][-self.Nj:]
 
         # Error estimates
         p["amp_err"] = sqrt(2./self.N) * rms
