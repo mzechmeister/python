@@ -34,7 +34,7 @@ from __future__ import print_function, division
 import numpy as np
 from numpy import sum, pi, cos, sin, arctan2, exp, log, sqrt,\
                   dot, argmax, arange
-from pause import *
+#from pause import *
 #from gplot import *
 from scipy import optimize as op
 import time
@@ -50,7 +50,7 @@ map = lambda *x: list(xmap(*x))
 xzip = zip
 zip = lambda *x: list(xzip(*x))
 
-__version__ = '2020-02-13'
+__version__ = '2021-08-18'
 __author__ = 'Mathias Zechmeister'
 
 def mod_abc(x, a):
