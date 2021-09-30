@@ -31,7 +31,7 @@ import numpy as np
 from numpy import sum, pi, cos, sin, arctan2, exp, log, sqrt,\
                   dot, arange
 
-__version__ = '2018-10-17'
+__version__ = '2021-09-30'
 __author__ = 'Mathias Zechmeister, Stefan Czesla'
 
 class Gls:
