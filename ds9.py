@@ -358,20 +358,11 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
       if frame: ds9.frame(frame, port=port)
       pipeds9 = subprocess.Popen(['xpaset '+port+' regions'], shell=True, stdin=subprocess.PIPE, universal_newlines=True, bufsize=0)  # This line is needed for python3! Unbuffered and to pass str )
       pipeds9.communicate(lines)
-   else:
+   elif regfile == '-':
       print(lines)
-      pass
-
-   #endif else if regfile eq '-' then $
-      #; may result in % SPAWN: Error managing child process.
-      #; Argument list too long
-      #;spawn, 'echo -e "'+strjoin(lines,"\n")+'" | xpaset '+port+' regions' $
-      #print, transpose(lines) $
-   #else begin
-      #openw, ounit, regfile, /get_lun
-      #printf, ounit, transpose(lines)
-      #free_lun, ounit
-   #endelse
+   else:
+      with open(regfile, 'w') as f:
+         print(lines, file=f)
 
 
 #;+
