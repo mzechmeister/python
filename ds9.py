@@ -13,6 +13,12 @@ __version__= '2.23'
 __date__ = '2020-08-14'
 
 
+def checkport(func):
+    def wrap(self, *args, **kwargs):
+        if 'port' not in kwargs:
+            kwargs['port'] = self.port
+        return func(self, *args, **kwargs)
+    return wrap
 
 class DS9:
    """
@@ -28,18 +34,26 @@ class DS9:
    >>> ds9.cmap('bb')
 
    """
+   port = 'pyds9'
+   @checkport
    def __call__(self, *_, **__):
        _ds9(*_, **__)
+   @checkport
    def line(self, *_, **__):
        ods9(*_, line=True, **__)
+   @checkport
    def box(self, *_, **__):
        ods9(*_, box=True, **__)
+   @checkport
    def curve(self, *_, **__):
        ods9(*_, curve=True, **__)
+   @checkport
    def circle(self, *_, **__):
        ods9(*_, circle=True, **__)
+   @checkport
    def text(self, cx, cy, text, **__):
        ods9(cx, cy, pt="text", label=text, **__)
+   @checkport
    def msk(self, *_, **__):
        ds9msk(*_, **__)
    def show(self):
@@ -49,9 +63,9 @@ class DS9:
    def set(self, *args, **kwargs):
 #      for arg in args:
 #         subprocess.call('xpaset -p %s %s' % (port, args), shell=True)
-       subprocess.call('xpaset -p '+kwargs.get('port','pyds9') + " %s"*len(args) % args, shell=True)
+       subprocess.call('xpaset -p '+kwargs.get('port',self.port) + " %s"*len(args) % args, shell=True)
    def get(self, *args, **kwargs):
-       result, status = subprocess.Popen("xpaget "+kwargs.get('port','pyds9')+" %s"*len(args) % args, shell=True, stdout=subprocess.PIPE, stderr= subprocess.PIPE, universal_newlines=True, bufsize=0).communicate()
+       result, status = subprocess.Popen("xpaget "+kwargs.get('port',self.port)+" %s"*len(args) % args, shell=True, stdout=subprocess.PIPE, stderr= subprocess.PIPE, universal_newlines=True, bufsize=0).communicate()
        return result
    def get_array(self, *args, **kwargs):
        h = int(self.get('fits height'))
@@ -67,8 +81,8 @@ class DS9:
          print(self.__doc__)
       else:
          # dynamic attributes (pan_to, cmap, etc.)
-         def func(*args):
-            return self.set(name.replace("_"," "), *args)
+         def func(*args, **kwargs):
+            return self.set(name.replace("_"," "), *args, **kwargs)
          return func
 
 
@@ -98,6 +112,7 @@ def _ds9(data, tmpfile='-', port='pyds9', obj=None, frame=0):
       tmpfile = data
    elif tmpfile=='-':
       # data.T because fortran-like
+      data = np.asarray(data)
       dim = ",".join("%sdim=%i" % b for b in zip(('x','y','z'),data.T.shape))
       dim += ",bitpix=%i" % dict(bool=8, int64=64, int32=32, int16=16, uint16=-16, float64=-64, float32=-32)[data.dtype.name]
       endian = data.dtype.byteorder
@@ -113,7 +128,7 @@ def _ds9(data, tmpfile='-', port='pyds9', obj=None, frame=0):
       hdu.writeto(tmpfile, clobber=True)
       subprocess.call('xds9 -p '+port+' '+tmpfile+' &', shell=True)
 
-   ports, xpamiss = subprocess.Popen("xpaget xpans | grep 'DS9 "+port+"'", shell=True, stdout=subprocess.PIPE, stderr= subprocess.PIPE, universal_newlines=True, bufsize=0).communicate()
+   ports, xpamiss = subprocess.Popen("xpaget xpans | grep 'DS9 "+port+" '", shell=True, stdout=subprocess.PIPE, stderr= subprocess.PIPE, universal_newlines=True, bufsize=0).communicate()
 
    if ports == '':
       # switch to normal start and create a new port
@@ -318,7 +333,7 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
    lines = "\n".join(header + coord + lines)
 
    # check if the port exists
-   ports, xpamiss = subprocess.Popen("xpaget xpans | grep 'DS9 "+port+"'", shell=True, stdout=subprocess.PIPE, stderr= subprocess.PIPE, universal_newlines=True, bufsize=0).communicate()
+   ports, xpamiss = subprocess.Popen("xpaget xpans | grep 'DS9 "+port+"'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, bufsize=0).communicate()
 
    if ports == '':
       print('xpa misses: ', port)
@@ -340,6 +355,7 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
       #; flush, ounit ; does this helps ?
       #free_lun, ounit
       #print(lines)
+      if frame: ds9.frame(frame, port=port)
       pipeds9 = subprocess.Popen(['xpaset '+port+' regions'], shell=True, stdin=subprocess.PIPE, universal_newlines=True, bufsize=0)  # This line is needed for python3! Unbuffered and to pass str )
       pipeds9.communicate(lines)
    else:
