@@ -1,8 +1,8 @@
 #   Additional shortcuts (defined in ~/.ds9.ans)
-#   v02 (2015-10-29) by Mathias Zechmeister
+#   v03 (2021-12-09) by Mathias Zechmeister
 #   to emulate shortcuts using ds9 binding via load analysis
 #   see also ~/bin/ds9pan and ~/bin/ds9zoom
-#   
+#
 # use | $null to suppress newlines
 
 Additional shortcuts...
@@ -290,11 +290,5 @@ Take Snapshot ~/ids9tmp.png (Alt-C)
 *
 menu
 xpaset -p "$xpa_method" tcl "exec import -window [winfo id .] $::env(HOME)/ids9tmp.png"
-
-
-bla
-*
-menu
-echo $xpa $xpa_method | $text
 
 
