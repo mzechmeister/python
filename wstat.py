@@ -259,7 +259,8 @@ def wstd(y, e, axis=None, dim=(), ret_err=False):
 
    """
    w = np.zeros_like(e, dtype=np.float)
-   ind = e > 0
+   with np.errstate(invalid='ignore'):
+       ind = e > 0
    w[ind] = 1. / e[ind]**2
 
    d = range(y.ndim)
