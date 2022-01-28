@@ -20,6 +20,16 @@ def checkport(func):
         return func(self, *args, **kwargs)
     return wrap
 
+def set_frame(frame, port):
+    if frame is None:
+        return
+    elif frame > 0:
+        subprocess.call('xpaset -p '+port+' frame %s'%frame, shell=True)
+    elif frame == 0:
+        subprocess.call('xpaset -p '+port+' frame new', shell=True)
+    else:
+        pass   # all negative currently to the current frame
+
 class DS9:
    """
    Pipes data and commands to ds9.
@@ -63,7 +73,9 @@ class DS9:
    def set(self, *args, **kwargs):
 #      for arg in args:
 #         subprocess.call('xpaset -p %s %s' % (port, args), shell=True)
-       subprocess.call('xpaset -p '+kwargs.get('port',self.port) + " %s"*len(args) % args, shell=True)
+       if 'frame' in kwargs:
+           set_frame(kwargs.pop('frame'), kwargs.get('port', self.port))
+       subprocess.call('xpaset -p '+kwargs.get('port', self.port) + " %s"*len(args) % args, shell=True)
    def get(self, *args, **kwargs):
        result, status = subprocess.Popen("xpaget "+kwargs.get('port',self.port)+" %s"*len(args) % args, shell=True, stdout=subprocess.PIPE, stderr= subprocess.PIPE, universal_newlines=True, bufsize=0).communicate()
        return result
@@ -141,12 +153,7 @@ def _ds9(data, tmpfile='-', port='pyds9', obj=None, frame=0):
       else:
          subprocess.call('xds9 -p '+port+' '+tmpfile+' &', shell=True)
    else:
-      if frame > 0:
-         subprocess.call('xpaset -p '+port+' frame %s'%frame, shell=True)
-      elif frame == 0:
-         subprocess.call('xpaset -p '+port+' frame new', shell=True)
-      else:
-         pass # all negative currently to the last frame
+      set_frame(frame, port)
 
       if tmpfile == '-':
          pipeds9 = subprocess.Popen(['xpaset '+port+" array -'["+dim+"']"], shell=True, stdin=subprocess.PIPE)
@@ -154,7 +161,7 @@ def _ds9(data, tmpfile='-', port='pyds9', obj=None, frame=0):
          pipeds9.stdin.write(data.tobytes())
          pipeds9.stdin.close()
       else:
-         subprocess.call('xds9 -p '+port+' '+tmpfile+' &', shell=True)
+         subprocess.call('xpaset -p '+port+' fits '+tmpfile+' &', shell=True)
 
    if obj:
        # xpaset pyds9 wcs append <<< "OBJECT = 'GJ699'"
