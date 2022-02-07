@@ -212,6 +212,12 @@ class Gplot(object):
       pl = ',' if self.flush=='' else ' replot '
       return self._plot(pl, *args, **kwargs)
 
+   def array(self, **kwargs):
+      # set gnuplot variables
+      # gplot.array(A=[1, 2, 3], B=[4, 5, "6"])
+      for k,v in kwargs.items(): self.put("array %s[%d] = %s" % (k, len(v), list(v)))
+      return self
+
    def var(self, **kwargs):
       # set gnuplot variables
       for i in kwargs.items(): self.put("%s=%s" % i)
