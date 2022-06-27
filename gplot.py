@@ -351,10 +351,15 @@ class Iplot(Gplot):
       return super(Iplot, self).__init__(*args, **kwargs)
 
    def _plot(self, *args, **kwargs):
+      '''
+      filename : Output to a user specified file.
+      '''
       self.canvasnum += 1
       uri = self.uri
+      filename = kwargs.pop('file', None)
       canvasname = "fishplot_%s" % self.canvasnum
-      term = {'svg': 'svg mouse %s' % self.jsdir,
+      term = {'pdf': 'pdfcairo',
+              'svg': 'svg mouse %s' % self.jsdir,
               'svg5': 'svg mouse standalone name "bla"',
               'html': 'canvas name "%s" mousing %s' % (canvasname, self.jsdir)
              }.get(self.suffix, 'pngcairo') + ' ' + self.opt
@@ -365,7 +370,7 @@ class Iplot(Gplot):
       # svg + uri, as inline
       # html + no_uri (if cleanup=False, the browser can read the file)
       # html + uri -> works
-      imgfile = tempfile.NamedTemporaryFile(suffix='.'+self.suffix).name
+      imgfile = filename or tempfile.NamedTemporaryFile(suffix='.'+self.suffix).name
       if self.suffix=='svg' and not uri:
          # use a local file
          imgfile = 'simple_%s.svg' % self.canvasnum
@@ -404,8 +409,9 @@ class Iplot(Gplot):
 
       imgdata = imgfile
 
-      from IPython.display import Image, SVG, HTML, Javascript
-      showfunc = {'svg':SVG, 'html':HTML}.get(self.suffix, Image)
+      from IPython.display import Image, SVG, IFrame, HTML, Javascript
+      showfunc = {'svg':SVG, 'html':HTML, 'pdf': IFrame}.get(self.suffix, Image)
+      showargs = {'width': 600, 'height': 300} if showfunc == IFrame else {}
 
       if self.suffix=='svg':
          if not uri:
@@ -509,8 +515,8 @@ class Iplot(Gplot):
             ''' % ((self._jsdir,)*4 + (imgdata,) + (self._jsdir,)*5 + (canvasname,)*12)
 
       #print(imgdata)
-      img = showfunc(imgdata)
-      if self.cleanup and not (self.suffix=='svg' and not uri):
+      img = showfunc(imgdata, **showargs)
+      if self.cleanup and not filename and not (self.suffix=='svg' and not uri):
          os.system("rm -f "+imgfile)
          # print(counter, end='\r')
          # print(counter, imgfile, os.path.exists(imgfile), os.system("lsof "+imgfile))
