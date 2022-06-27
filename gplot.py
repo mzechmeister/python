@@ -357,12 +357,15 @@ class Iplot(Gplot):
       self.canvasnum += 1
       uri = self.uri
       filename = kwargs.pop('file', None)
+      suffix = kwargs.pop('suffix', self.suffix)
+      if filename:
+           suffix = os.path.splitext(filename)[1][1:]   # extension without separator
       canvasname = "fishplot_%s" % self.canvasnum
       term = {'pdf': 'pdfcairo',
               'svg': 'svg mouse %s' % self.jsdir,
               'svg5': 'svg mouse standalone name "bla"',
               'html': 'canvas name "%s" mousing %s' % (canvasname, self.jsdir)
-             }.get(self.suffix, 'pngcairo') + ' ' + self.opt
+             }.get(suffix, 'pngcairo') + ' ' + self.opt
       # png + no_uri, Image still converts into uri -> but works
       # png + uri, Image still converts into uri -> works
       # svg + local_svg, mousing works
@@ -370,11 +373,11 @@ class Iplot(Gplot):
       # svg + uri, as inline
       # html + no_uri (if cleanup=False, the browser can read the file)
       # html + uri -> works
-      imgfile = filename or tempfile.NamedTemporaryFile(suffix='.'+self.suffix).name
-      if self.suffix=='svg' and not uri:
+      imgfile = filename or tempfile.NamedTemporaryFile(suffix='.'+suffix).name
+      if suffix=='svg' and not uri:
          # use a local file
          imgfile = 'simple_%s.svg' % self.canvasnum
-      if self.suffix=='html':
+      if suffix=='html':
          imgfile = canvasname + '.js'
 
       if uri:
@@ -410,10 +413,10 @@ class Iplot(Gplot):
       imgdata = imgfile
 
       from IPython.display import Image, SVG, IFrame, HTML, Javascript
-      showfunc = {'svg':SVG, 'html':HTML, 'pdf': IFrame}.get(self.suffix, Image)
+      showfunc = {'svg':SVG, 'html':HTML, 'pdf': IFrame}.get(suffix, Image)
       showargs = {'width': 600, 'height': 300} if showfunc == IFrame else {}
 
-      if self.suffix=='svg':
+      if suffix=='svg':
          if not uri:
             showfunc = HTML
             imgdata = '<embed src="%s" type="image/svg+xml">' % imgfile
@@ -438,7 +441,7 @@ class Iplot(Gplot):
     <object>
             ''' + imgdata + '</object>')
 
-      if self.suffix=='html':
+      if suffix=='html':
          if uri:
             imgdata = '<script>%s</script>' % open(imgfile).read()
          else:
@@ -516,7 +519,7 @@ class Iplot(Gplot):
 
       #print(imgdata)
       img = showfunc(imgdata, **showargs)
-      if self.cleanup and not filename and not (self.suffix=='svg' and not uri):
+      if self.cleanup and not filename and not (suffix=='svg' and not uri):
          os.system("rm -f "+imgfile)
          # print(counter, end='\r')
          # print(counter, imgfile, os.path.exists(imgfile), os.system("lsof "+imgfile))
