@@ -524,7 +524,7 @@ class Iplot(Gplot):
          # print(counter, end='\r')
          # print(counter, imgfile, os.path.exists(imgfile), os.system("lsof "+imgfile))
       else:
-         print(imgfile)
+         display(HTML('<a href="%s">%s</a>' % (imgfile, imgfile)))
       return img
 
 # a default instance
