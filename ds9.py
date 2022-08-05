@@ -350,6 +350,7 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
       #spawn, 'xpaset -p '+port+' frame reset'
    #if keyword_set(frame) then $
       #spawn, 'xpaset -p '+port+' frame '+string(frame)
+   if frame: ds9.frame(frame, port=port)
    if clear: subprocess.call('xpaset -p '+port+' regions delete all', shell=True)
 
    if not regfile:
@@ -362,7 +363,6 @@ def ods9(cx, cy, arg1=None, arg2=None, port='pyds9', frame=None, lastframe=False
       #; flush, ounit ; does this helps ?
       #free_lun, ounit
       #print(lines)
-      if frame: ds9.frame(frame, port=port)
       pipeds9 = subprocess.Popen(['xpaset '+port+' regions'], shell=True, stdin=subprocess.PIPE, universal_newlines=True, bufsize=0)  # This line is needed for python3! Unbuffered and to pass str )
       pipeds9.communicate(lines)
    elif regfile == '-':
