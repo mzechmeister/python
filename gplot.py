@@ -11,7 +11,7 @@ __version__ = 'v17'
 __date__ = '2021-03-30'
 __all__ = ['gplot', 'Gplot', 'ogplot', 'Iplot']
 
-
+from pause import *
 class Gplot(object):
    """
    An interface between Python and gnuplot.
@@ -209,7 +209,7 @@ class Gplot(object):
       return self._plot('test', *args, **kwargs)
 
    def oplot(self, *args, **kwargs):
-      pl = ',' if self.flush=='' else ' replot '
+      pl = (',' if self.og else '') if self.flush=='' else ' replot '
       return self._plot(pl, *args, **kwargs)
 
    def array(self, **kwargs):
@@ -360,6 +360,7 @@ class Iplot(Gplot):
       suffix = kwargs.pop('suffix', self.suffix)
       if filename:
            suffix = os.path.splitext(filename)[1][1:]   # extension without separator
+           uri = False
       canvasname = "fishplot_%s" % self.canvasnum
       term = {'pdf': 'pdfcairo',
               'svg': 'svg mouse %s' % self.jsdir,
