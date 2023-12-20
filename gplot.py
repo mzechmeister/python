@@ -254,7 +254,7 @@ class Gplot(object):
       The plot will be update immediately. To pass flush='', use the __lt__
       method.
       '''
-      self.oplot(*other) if other else self._plot()
+      return self.oplot(*other) if other else self._plot()
 
    def __sub__(self, other):
       '''Start a new plot, but do not flush.
@@ -354,6 +354,9 @@ class Iplot(Gplot):
       '''
       filename : Output to a user specified file.
       '''
+      if kwargs.get('flush') == '':
+          super(Iplot, self)._plot(*args, **kwargs)
+          return
       self.canvasnum += 1
       uri = self.uri
       filename = kwargs.pop('file', None)
