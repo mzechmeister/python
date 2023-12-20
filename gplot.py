@@ -11,7 +11,7 @@ __version__ = 'v17'
 __date__ = '2021-03-30'
 __all__ = ['gplot', 'Gplot', 'ogplot', 'Iplot']
 
-from pause import *
+
 class Gplot(object):
    """
    An interface between Python and gnuplot.
