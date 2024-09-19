@@ -31,3 +31,22 @@ and include the following line in your `~/.gnuplot`:
 ```
 load "<path>/zoom.gnu"
 ```
+
+## ds9.py - A python ds9 interface
+
+Here is an example, how to use `ds9` from python
+```python
+from ds9 import *
+ds9([[1,2],[3,4]])
+ds9.cmap('bb')
+ds9.zoom_to(16)
+```
+
+### Installation of ds9.py
+
+```bash
+wget https://raw.githubusercontent.com/mzechmeister/python/master/ds9.py
+```
+
+Moreover, `numpy` and `astropy` are required and `xpa` must be available for the corresponding architecture (can be downloaded from https://sites.google.com/cfa.harvard.edu/saoimageds9/download).
+
