@@ -129,7 +129,7 @@ def _ds9(data, tmpfile='-', port='pyds9', obj=None, frame=0):
       dim += ",bitpix=%i" % dict(bool=8, int64=64, int32=32, int16=16, uint16=-16, float64=-64, float32=-32)[data.dtype.name]
       endian = data.dtype.byteorder
       if endian in '<>':
-         dim += ",endian=[%s]" % {'<':'little', '>':'big'}[endian]
+         dim += ",endian=%s" % {'<':'little', '>':'big'}[endian]
       #pipeds9 = subprocess.Popen(['xpaset', port,'array', '-', dim], shell=True, stdin=subprocess.PIPE,)
       #pipeds9 = subprocess.Popen(['cat - > tmp1'], shell=True, stdin=subprocess.PIPE,)
       #data.tofile('tmp1')
