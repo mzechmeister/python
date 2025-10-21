@@ -1,9 +1,11 @@
 #   Additional shortcuts (defined in ~/.ds9.ans)
-#   v03 (2021-12-09) by Mathias Zechmeister
+#   v04 (2025-10-21) by Mathias Zechmeister
 #   to emulate shortcuts using ds9 binding via load analysis
 #   see also ~/bin/ds9pan and ~/bin/ds9zoom
 #
-# use | $null to suppress newlines
+# use | $null to suppress newlines, but cause now zombie processes
+# using > /dev/null | $null causes only one zombie processes, which vanishes for another command without $null, i.e. newline.
+# ds9 v8.6 seems to need curly braces in exec commands
 
 Additional shortcuts...
 *
@@ -23,225 +25,225 @@ awk "/^.   /; /^bind/{$1=\"\";$2=sprintf(\"%-15s\",$2); print}" $env(HOME)/.ds9.
 *
 *
 bind i # zoom in
-xpaset -p  "$xpa_method" zoom 2 | $null
+xpaset -p  "$xpa_method" zoom 2 > /dev/null | $null
 
 *
 *
 bind KP_Add # zoom in
-xpaset -p  "$xpa_method" zoom 2 | $null
+xpaset -p  "$xpa_method" zoom 2 > /dev/null | $null
 
 *
 *
 bind o # zoom out
-xpaset -p  "$xpa_method" zoom 0.5 | $null
+xpaset -p  "$xpa_method" zoom 0.5 > /dev/null | $null
 
 *
 *
 bind KP_Subtract # zoom out
-xpaset -p  "$xpa_method" zoom 0.5 | $null
+xpaset -p  "$xpa_method" zoom 0.5 > /dev/null | $null
 
 *
 *
 bind u # zoom to fit
-xpaset -p  "$xpa_method" zoom to fit | $null
+xpaset -p  "$xpa_method" zoom to fit > /dev/null | $null
 
 *
 *
 bind Alt-u # zoom to fit both
-~/bin/ds9zoom u "$xpa_method" "$width" "$height" | $null
+~/bin/ds9zoom u "$xpa_method" "$width" "$height" > /dev/null | $null
 
 *
 *
 bind Alt-x # zoom to fit x
-sh -c "~/bin/ds9zoom x $xpa_method $width $height; ds9pan home $xpa_method" | $null
-#~/bin/ds9zoom x "$xpa_method" "$width" "$height" | $null
+sh -c "~/bin/ds9zoom x $xpa_method $width $height; ds9pan home $xpa_method" > /dev/null | $null
+#~/bin/ds9zoom x "$xpa_method" "$width" "$height" > /dev/null | $null
 
 *
 *
 bind Alt-y # zoom to fit y
-sh -c "~/bin/ds9zoom y $xpa_method $width $height; ds9pan home $xpa_method" | $null
-#~/bin/ds9zoom y "$xpa_method" "$width" "$height" | $null
+sh -c "~/bin/ds9zoom y $xpa_method $width $height; ds9pan home $xpa_method" > /dev/null | $null
+#~/bin/ds9zoom y "$xpa_method" "$width" "$height" > /dev/null | $null
 
 *
 *
 bind Shift-Key-Left  # pan left (bind a)
-~/bin/ds9pan left "$xpa_method" | $null
+~/bin/ds9pan left "$xpa_method" > /dev/null | $null
 
 *
 *
 bind Shift-Key-Right  # pan right (bind d)
-~/bin/ds9pan right "$xpa_method" | $null
+~/bin/ds9pan right "$xpa_method" > /dev/null | $null
 *
 *
 bind Shift-Key-Up  # pan up (bind w)
-~/bin/ds9pan up "$xpa_method" | $null
+~/bin/ds9pan up "$xpa_method" > /dev/null | $null
 
 *
 *
 bind Shift-Key-Down   # pan down (bind s)
-~/bin/ds9pan down "$xpa_method" | $null
+~/bin/ds9pan down "$xpa_method" > /dev/null | $null
 
 *
 *
 bind Next # pan page down (PageDown)
-~/bin/ds9pan pagedown "$xpa_method" | $null
+~/bin/ds9pan pagedown "$xpa_method" > /dev/null | $null
 
 *
 *
 bind Control-Next # pan to bottom (Ctrl-PageDown)
-~/bin/ds9pan bottom "$xpa_method" | $null
+~/bin/ds9pan bottom "$xpa_method" > /dev/null | $null
 
 *
 *
 bind Prior # pan page up (PageUp)
-~/bin/ds9pan pageup "$xpa_method" | $null
+~/bin/ds9pan pageup "$xpa_method" > /dev/null | $null
 
 *
 *
 bind Control-Prior # pan to top (Ctrl-PageUp)
-~/bin/ds9pan top "$xpa_method" | $null
+~/bin/ds9pan top "$xpa_method" > /dev/null | $null
 
 *
 *
 bind Home # pan pageleft
-~/bin/ds9pan pageleft "$xpa_method" | $null
+~/bin/ds9pan pageleft "$xpa_method" > /dev/null | $null
 
 *
 *
 bind Control-Home # pan to left margin
-~/bin/ds9pan home "$xpa_method" | $null
+~/bin/ds9pan home "$xpa_method" > /dev/null | $null
 
 *
 *
 bind End # pan page right
-~/bin/ds9pan pageright "$xpa_method" | $null
+~/bin/ds9pan pageright "$xpa_method" > /dev/null | $null
 
 *
 *
 bind Control-End # pan to right margin
-~/bin/ds9pan end "$xpa_method" | $null
+~/bin/ds9pan end "$xpa_method" > /dev/null | $null
 
 *
 *
 bind p # mode pan
-xpaset -p "$xpa_method"  mode pan | $null
+xpaset -p "$xpa_method"  mode pan > /dev/null | $null
 
 *
 *
 bind z # mode zoom
-xpaset -p  "$xpa_method"  mode zoom | $null
+xpaset -p  "$xpa_method"  mode zoom > /dev/null | $null
 
 *
 *
 bind r # rotate by 90 deg
-xpaset -p  "$xpa_method"  rotate 90 | $null
+xpaset -p  "$xpa_method"  rotate 90 > /dev/null | $null
 
 *
 *
 bind y # zoom in y
-xpaset -p  "$xpa_method"  zoom 1 2 | $null
+xpaset -p  "$xpa_method"  zoom 1 2 > /dev/null | $null
 
 *
 *
 bind Control-Up # zoom in y
-xpaset -p  "$xpa_method"  zoom 1 2 | $null
+xpaset -p  "$xpa_method"  zoom 1 2 > /dev/null | $null
 
 *
 *
 bind Y # zoom out y
-xpaset -p  "$xpa_method"  zoom 1 .5 | $null
+xpaset -p  "$xpa_method"  zoom 1 .5 > /dev/null | $null
 
 *
 *
 bind Control-Down # zoom out y
-xpaset -p  "$xpa_method"  zoom 1 .5 | $null
+xpaset -p  "$xpa_method"  zoom 1 .5 > /dev/null | $null
 
 *
 *
 bind x # zoom in x
-xpaset -p  "$xpa_method"  zoom 2 1 | $null
+xpaset -p  "$xpa_method"  zoom 2 1 > /dev/null | $null
 
 *
 *
 bind Control-Right # zoom in x
-xpaset -p  "$xpa_method"  zoom 2 1 | $null
+xpaset -p  "$xpa_method"  zoom 2 1 > /dev/null | $null
 
 *
 *
 bind X # zoom out x
-xpaset -p  "$xpa_method"  zoom .5 1 | $null
+xpaset -p  "$xpa_method"  zoom .5 1 > /dev/null | $null
 
 *
 *
 bind Control-Left # zoom out x
-xpaset -p  "$xpa_method"  zoom .5 1 | $null
+xpaset -p  "$xpa_method"  zoom .5 1 > /dev/null | $null
 
 *
 *
 bind Alt-Left # move cursor by one pixel
-~/bin/ds9pan curleft  "$xpa_method" | $null
+~/bin/ds9pan curleft  "$xpa_method" > /dev/null | $null
 
 *
 *
 bind Alt-Right # move cursor by one pixel
-~/bin/ds9pan curright  "$xpa_method" | $null
+~/bin/ds9pan curright  "$xpa_method" > /dev/null | $null
 
 *
 *
 bind Alt-Up # move cursor by one pixel
-~/bin/ds9pan curup  "$xpa_method" | $null
+~/bin/ds9pan curup  "$xpa_method" > /dev/null | $null
 
 *
 *
 bind Alt-Down # move cursor by one pixel
-~/bin/ds9pan curdown  "$xpa_method" | $null
+~/bin/ds9pan curdown  "$xpa_method" > /dev/null | $null
 
 
 *
 *
 bind b # cmap bb
-xpaset -p  "$xpa_method" cmap bb | $null
+xpaset -p  "$xpa_method" cmap bb > /dev/null | $null
 
 *
 *
 bind B # cmap grey
-xpaset -p  "$xpa_method" cmap grey | $null
+xpaset -p  "$xpa_method" cmap grey > /dev/null | $null
 
 *
 *
 bind m # match frames image
-xpaset -p  "$xpa_method" match frames image | $null
+xpaset -p  "$xpa_method" match frames image > /dev/null | $null
 
 *
 *
 bind M  # match scale and colorbar
-sh -c "xpaset -p  $xpa_method match scale; xpaset -p  $xpa_method match colorbar" | $null
+sh -c "xpaset -p  $xpa_method match scale; xpaset -p  $xpa_method match colorbar" > /dev/null | $null
 # We need this trick to execute multiple command.
 
 *
 *
 bind l  # lock frames image
-xpaset -p  "$xpa_method" lock frame image | $null
+xpaset -p  "$xpa_method" lock frame image > /dev/null | $null
 
 *
 *
 bind L  # lock frames image
-sh -c "xpaset -p  $xpa_method lock scale; xpaset -p  $xpa_method lock colorbar" | $null
+sh -c "xpaset -p  $xpa_method lock scale; xpaset -p  $xpa_method lock colorbar" > /dev/null | $null
 
 *
 *
 bind Alt-l  # lock frames image
-sh -c "xpaset -p  $xpa_method lock scale no; xpaset -p  $xpa_method lock colorbar no" | $null
+sh -c "xpaset -p  $xpa_method lock scale no; xpaset -p  $xpa_method lock colorbar no" > /dev/null | $null
 
 *
 *
 bind Control-w   # frame delete
-xpaset -p  "$xpa_method" frame delete | $null
+xpaset -p  "$xpa_method" frame delete > /dev/null | $null
 
 *
 *
 bind Control-q   # quit
-xpaset -p  "$xpa_method" quit | $null
+xpaset -p  "$xpa_method" quit > /dev/null | $null
 
 *
 *
@@ -266,29 +268,29 @@ echo "$bitpix $width $height $depth pan: $pan mouse: $x $y $z xpa $xpa $xpa_meth
 *
 *
 bind F5   # toggle view buttons panner magnifier info
-sh -c "s=`xpaget $xpa_method view info | sed 's/yes/ no/; s/^no/yes/'`; for f in buttons panner magnifier info; do xpaset -p $xpa_method view \$f \$s; done" | $null
+sh -c "s=`xpaget $xpa_method view info | sed 's/yes/ no/; s/^no/yes/'`; for f in buttons panner magnifier info; do xpaset -p $xpa_method view \$f \$s; done" > /dev/null | $null
 
 # The pipe does not work when called inside ds9 (debug/console; analysis)
 # It works, however, when called externally from bash!?
 Take Snapshot
 *
 bind Alt-c
-xpaset -p "$xpa_method" tcl "exec import -window [winfo id .] png:- | xclip -sel clip -t image/png | echo"
+xpaset -p "$xpa_method" tcl "{exec import -window [winfo id .] png:- | xclip -sel clip -t image/png | echo}"
 
 Take Snapshot (Alt-c)
 *
 menu
-xpaset -p "$xpa_method" tcl "exec import -window [winfo id .] png:- | xclip -sel clip -t image/png | echo"
+xpaset -p "$xpa_method" tcl "{exec import -window [winfo id .] png:- | xclip -sel clip -t image/png | echo}"
 
 
 Take Snapshot as ~/ids9tmp.png
 *
 bind Alt-C
-xpaset -p "$xpa_method" tcl "exec import -window [winfo id .] $::env(HOME)/ids9tmp.png"
+xpaset -p "$xpa_method" tcl "{exec import -window [winfo id .] $::env(HOME)/ids9tmp.png}"
 
 Take Snapshot ~/ids9tmp.png (Alt-C)
 *
 menu
-xpaset -p "$xpa_method" tcl "exec import -window [winfo id .] $::env(HOME)/ids9tmp.png"
+xpaset -p "$xpa_method" tcl "{exec import -window [winfo id .] $::env(HOME)/ids9tmp.png}"
 
 
